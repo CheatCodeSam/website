@@ -1,0 +1,70 @@
+---
+import type { MarkdownInstance } from 'astro';
+import BasePageLayout from '../../layouts/BasePageLayout.astro';
+
+type Post = {
+  id: string;
+  title: string;
+  createdAt: Date;
+};
+
+const posts = (await Astro.glob<Post>('./*/*.md')).sort((a, b) => +b.frontmatter.id - +a.frontmatter.id);
+const postsByYear = new Map<number, MarkdownInstance<Post>[]>();
+
+for (const post of posts) {
+  const year = new Date(post.frontmatter.createdAt).getFullYear();
+
+  if (!postsByYear.has(year)) {
+    postsByYear.set(year, []);
+  }
+  postsByYear.get(year)?.push(post);
+}
+---
+
+<BasePageLayout title="Blog">
+  <header>
+    <h1>Blog</h1>
+    <p>
+      This is my personal blog where I show my journey as a developer while exploring various science and technology
+      topics that interest me.
+    </p>
+    <p>Occasionally I may also make some devlogs and tutorials when I find a good topic.</p>
+  </header>
+
+  <div class="posts">
+    {
+      [...postsByYear.entries()].map(([year, posts]) => (
+        <div class="post-group">
+          <h2>{year}</h2>
+          <ul>
+            {posts.map((post) => (
+              <li>
+                <a href={post.url}>{post.frontmatter.title}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</BasePageLayout>
+
+<style lang="scss">
+  header,
+  .posts {
+    max-width: 80ch;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    margin: auto;
+  }
+
+  h1 {
+    font-size: 3em;
+  }
+
+  header p {
+    font-size: 1.25em;
+    color: gray;
+  }
+</style>

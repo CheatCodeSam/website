@@ -1,0 +1,32 @@
+---
+import BasePageLayout from '../../layouts/BasePageLayout.astro';
+---
+
+<BasePageLayout title="Projects">
+  <header>
+    <h1>Projects</h1>
+    <p>Discover my projects and try them out for yourself!</p>
+  </header>
+
+  <div class="projects"></div>
+</BasePageLayout>
+
+<style lang="scss">
+  header,
+  .posts {
+    max-width: 80ch;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    margin: auto;
+  }
+
+  h1 {
+    font-size: 3em;
+  }
+
+  header p {
+    font-size: 1.25em;
+    color: gray;
+  }
+</style>

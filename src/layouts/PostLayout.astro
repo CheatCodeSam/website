@@ -1,0 +1,19 @@
+---
+import BasePageLayout from './BasePageLayout.astro';
+const { frontmatter } = Astro.props;
+---
+
+<BasePageLayout title={frontmatter.title}>
+  <article>
+    <h1>{frontmatter.title}</h1>
+    <span>{new Date(frontmatter.createdAt).toLocaleDateString()}</span>
+    <slot />
+  </article>
+</BasePageLayout>
+
+<style lang="scss">
+  article {
+    width: 80ch;
+    margin: auto;
+  }
+</style>
