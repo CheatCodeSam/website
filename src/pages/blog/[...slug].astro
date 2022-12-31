@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
+import { localOrRemoteSrcToUrl } from '../../utils';
 
 const { slug } = Astro.params;
 const posts = await getCollection('blog');
@@ -15,12 +16,15 @@ if (post.slug !== slug) {
 }
 
 const { Content } = await post.render();
+const { title, description, tags, thumbnail, createdAt } = post.data;
+const currUrl = new URL(Astro.request.url);
+const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
 ---
 
-<BasePageLayout title={post.data.title}>
+<BasePageLayout title={title} metaDescription={description} metaKeywords={tags} metaImageSrc={imgSrc}>
   <article>
-    <h1>{post.data.title}</h1>
-    <span>{post.data.createdAt.toLocaleDateString()}</span>
+    <h1>{title}</h1>
+    <span>{createdAt.toLocaleDateString()}</span>
     <Content />
   </article>
 </BasePageLayout>

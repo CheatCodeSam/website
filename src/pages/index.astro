@@ -3,8 +3,11 @@ import BasePageLayout from '../layouts/BasePageLayout.astro';
 import Card from '../components/Card.astro';
 ---
 
-<BasePageLayout title="Welcome to Astro.">
-  <main>
+<BasePageLayout
+  title="Home"
+  metaDescription="This is my personal website where I showcase my projects and write about whatever interests me from science, math and programming, to game development, music and art."
+  metaKeywords={['Programming', 'Web development', 'Technology', 'Science', 'Games', 'Game development', 'Art']}
+>
     <h1>Welcome to <span class="text-gradient">Gamitopia</span></h1>
     <p class="instructions">
       <strong>Gamitopia</strong> is my place for showcasing my projects, writing about topics that interest me and showing

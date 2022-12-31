@@ -3,18 +3,29 @@ import Nav from '../components/Nav.astro';
 
 export interface Props {
   title: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+  metaImageSrc?: string;
 }
 
-const { title } = Astro.props;
+const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
 ---
 
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
     <title>{title}</title>
+    <meta name="description" content={metaDescription} />
+    {metaKeywords && <meta name="keywords" content={metaKeywords?.join(', ')} />}
+    <meta name="og:title" property="og:title" content={title} />
+    <meta name="og:description" property="og:description" content={metaDescription} />
+    {metaImageSrc && <meta name="og:image" property="og:image" content={metaImageSrc} />}
   </head>
 
   <body>
