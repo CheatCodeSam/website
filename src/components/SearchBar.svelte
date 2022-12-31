@@ -2,8 +2,10 @@
   import type { MarkdownInstance } from 'astro';
   import { createEventDispatcher } from 'svelte';
   import type { Post, Project } from '../types.js';
+  import TimeLabel from './TimeLabel.svelte';
 
-  export let items: (MarkdownInstance<Post> | MarkdownInstance<Project>)[] = [];
+  type Item = MarkdownInstance<Post> | MarkdownInstance<Project>;
+  export let items: Item[] = [];
 
   const dispatch = createEventDispatcher();
   let filteredItems = items;
@@ -16,26 +18,30 @@
   let searchBoxElement: HTMLElement;
 
   $: {
-    filteredItems = items.filter((item) => {
-      let slice = item.frontmatter.title?.toLowerCase();
+    filteredItems = items.filter(isValid);
 
-      if (!slice) {
-        return;
-      }
-
-      for (const char of searchTerm.toLowerCase().split('')) {
-        if (!slice.includes(char)) {
-          return false;
-        }
-        slice = slice.slice(slice.indexOf(char) + 1);
-      }
-
-      return true;
-    });
     if (selectedIndex > filteredItems.length - 1) {
       selectedIndex = filteredItems.length - 1;
     }
+
     dispatch('search', filteredItems);
+  }
+
+  function isValid(item: Item): boolean {
+    let slice = item.frontmatter.title?.toLowerCase();
+
+    if (!slice) {
+      return false;
+    }
+
+    for (const char of searchTerm.toLowerCase().split('')) {
+      if (!slice.includes(char)) {
+        return false;
+      }
+      slice = slice.slice(slice.indexOf(char) + 1);
+    }
+
+    return true;
   }
 
   function handleSearchBarKeyDown(event: KeyboardEvent) {
@@ -43,13 +49,13 @@
       searchBarElement.blur();
     }
 
+    // Scroll to make sure the selected item is visible
     if (event.key === 'ArrowUp') {
       if (selectedIndex > 0) {
         event.preventDefault();
         selectedIndex--;
       }
 
-      // Scroll to make sure the selected item is visible
       let selectedTop = selectedElement.offsetTop - searchBarElement.offsetHeight;
       let scrollTarget = selectedTop - selectedElement.offsetHeight;
 
@@ -58,13 +64,13 @@
       }
     }
 
+    // Scroll to make sure the selected item is visible
     if (event.key === 'ArrowDown') {
       if (selectedIndex < filteredItems.length - 1) {
         event.preventDefault();
         selectedIndex++;
       }
 
-      // Scroll to make sure the selected item is visible
       let boxBottom = searchBoxElement.offsetHeight;
       let selectedBottom = selectedElement.offsetTop + selectedElement.offsetHeight - searchBarElement.offsetHeight;
       let scrollTarget = selectedBottom - boxBottom + selectedElement.offsetHeight;
@@ -112,10 +118,32 @@
         {#each filteredItems as item, index}
           {#if selectedIndex === index}
             <li class="search-result selected" bind:this={selectedElement}>
-              <a href={item.url}>{item.frontmatter.title}</a>
+              <a href={item.url}>
+                <span class="search-result-title">{item.frontmatter.title}</span>
+
+                <TimeLabel
+                  className="time-label"
+                  date={new Date(item.frontmatter.createdAt)}
+                  yearFormat={'numeric'}
+                  monthFormat={'short'}
+                  dayFormat={'2-digit'}
+                />
+              </a>
             </li>
           {:else}
-            <li class="search-result"><a href={item.url}>{item.frontmatter.title}</a></li>
+            <li class="search-result">
+              <a href={item.url}>
+                <span class="search-result-title">{item.frontmatter.title}</span>
+
+                <TimeLabel
+                  className="time-label"
+                  date={new Date(item.frontmatter.createdAt)}
+                  yearFormat={'numeric'}
+                  monthFormat={'short'}
+                  dayFormat={'2-digit'}
+                />
+              </a>
+            </li>
           {/if}
         {/each}
 
@@ -128,7 +156,7 @@
 </div>
 
 <style lang="scss">
-  $searchBarInputHeight: 2.5rem;
+  $searchBarInputHeight: 3rem;
 
   .search-bar {
     height: $searchBarInputHeight;
@@ -140,7 +168,7 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      padding: 0 0.5rem;
+      padding: 0 1rem;
       box-sizing: border-box;
       outline: none;
       border: none;
@@ -172,21 +200,25 @@
       list-style: none;
       overflow: auto;
 
-      li {
+      li.search-result {
+        display: block;
         width: 100%;
         height: 3rem;
         line-height: 3rem;
         font-size: 1.1em;
-        padding-left: 0.5rem;
-        box-sizing: border-box;
+        padding: 0;
 
-        &.search-result:hover,
-        &.search-result.selected {
+        &:hover,
+        &.selected {
           background-color: #00000022;
         }
 
         a {
-          display: block;
+          width: 100%;
+          padding: 0 1rem;
+          box-sizing: border-box;
+          display: flex;
+          justify-content: space-between;
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;

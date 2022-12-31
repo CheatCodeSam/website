@@ -3,6 +3,7 @@ import { Image } from '@astrojs/image/components';
 import type { MarkdownInstance } from 'astro';
 import type { Post } from '../types';
 import Tag from './Tag.astro';
+import TimeLabel from './TimeLabel.svelte';
 
 const post: MarkdownInstance<Post> = Astro.props.post;
 const description = post.frontmatter.description ?? getDescriptionFromPostContent();
@@ -28,7 +29,12 @@ function getDescriptionFromPostContent(): string {
 ---
 
 <li class="post-preview">
-  <time datetime={post.frontmatter.createdAt?.toString()}>{formattedDate}</time>
+  <TimeLabel
+    className="time-label"
+    date={new Date(post.frontmatter.createdAt)}
+    monthFormat={'short'}
+    dayFormat={'2-digit'}
+  />
 
   <div>
     <div class="preview-content">
@@ -97,11 +103,8 @@ function getDescriptionFromPostContent(): string {
     }
   }
 
-  time {
+  .time-label {
     margin-top: 1rem;
-    font-size: 1.2em;
-    opacity: 0.5;
-    font-family: monospace;
     display: block;
     min-width: $timeLabelWidth;
   }
