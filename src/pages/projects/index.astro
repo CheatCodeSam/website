@@ -1,16 +1,13 @@
 ---
-import type { MarkdownInstance } from 'astro';
+import { CollectionEntry, getCollection } from 'astro:content';
 import PageCard from '../../components/PageCard.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import type { Project } from '../../types';
 
-const projects = (await Astro.glob<Project>('./*/*.md')).sort(
-  (a, b) => +b.frontmatter.createdAt - +a.frontmatter.createdAt
-);
-const projectsByYear = new Map<number, MarkdownInstance<Project>[]>();
+const projects = (await getCollection('projects')).sort((a, b) => +b.data.createdAt - +a.data.createdAt);
+const projectsByYear = new Map<number, CollectionEntry<'projects'>[]>();
 
 for (const project of projects) {
-  const year = new Date(project.frontmatter.createdAt).getFullYear();
+  const year = new Date(project.data.createdAt).getFullYear();
 
   if (!projectsByYear.has(year)) {
     projectsByYear.set(year, []);

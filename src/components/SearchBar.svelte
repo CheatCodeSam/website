@@ -1,10 +1,9 @@
 <script lang="ts">
-  import type { MarkdownInstance } from 'astro';
+  import type { CollectionEntry } from 'astro:content';
   import { createEventDispatcher } from 'svelte';
-  import type { Post, Project } from '../types.js';
   import TimeLabel from './TimeLabel.svelte';
 
-  type Item = MarkdownInstance<Post> | MarkdownInstance<Project>;
+  type Item = CollectionEntry<'blog'> | CollectionEntry<'projects'>;
   export let items: Item[] = [];
 
   const dispatch = createEventDispatcher();
@@ -18,7 +17,7 @@
   let searchBoxElement: HTMLElement;
 
   $: {
-    filteredItems = items.filter(isValid);
+    filteredItems = items.filter((item) => isValid(item, searchTerm));
 
     if (selectedIndex > filteredItems.length - 1) {
       selectedIndex = filteredItems.length - 1;
@@ -27,8 +26,10 @@
     dispatch('search', filteredItems);
   }
 
-  function isValid(item: Item): boolean {
-    let slice = item.frontmatter.title?.toLowerCase();
+  const getItemUrl = (item: Item) => item.data.url || `/${item.collection}/${item.slug}`;
+
+  function isValid(item: Item, searchTerm: string): boolean {
+    let slice = item.data.title?.toLowerCase();
 
     if (!slice) {
       return false;
@@ -81,7 +82,7 @@
     }
 
     if (event.key === 'Enter') {
-      window.location.href = filteredItems[selectedIndex].url || window.location.href;
+      window.location.pathname = getItemUrl(filteredItems[selectedIndex]) || window.location.pathname;
     }
   }
 </script>
@@ -118,12 +119,12 @@
         {#each filteredItems as item, index}
           {#if selectedIndex === index}
             <li class="search-result selected" bind:this={selectedElement}>
-              <a href={item.url}>
-                <span class="search-result-title">{item.frontmatter.title}</span>
+              <a href={getItemUrl(item)}>
+                <span class="search-result-title">{item.data.title}</span>
 
                 <TimeLabel
                   className="time-label"
-                  date={new Date(item.frontmatter.createdAt)}
+                  date={new Date(item.data.createdAt)}
                   yearFormat={'numeric'}
                   monthFormat={'short'}
                   dayFormat={'2-digit'}
@@ -132,12 +133,12 @@
             </li>
           {:else}
             <li class="search-result">
-              <a href={item.url}>
-                <span class="search-result-title">{item.frontmatter.title}</span>
+              <a href={getItemUrl(item)}>
+                <span class="search-result-title">{item.data.title}</span>
 
                 <TimeLabel
                   className="time-label"
-                  date={new Date(item.frontmatter.createdAt)}
+                  date={new Date(item.data.createdAt)}
                   yearFormat={'numeric'}
                   monthFormat={'short'}
                   dayFormat={'2-digit'}

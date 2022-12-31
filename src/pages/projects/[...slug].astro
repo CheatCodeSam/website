@@ -1,0 +1,35 @@
+---
+import { CollectionEntry, getCollection } from 'astro:content';
+import BasePageLayout from '../../layouts/BasePageLayout.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await entry.render();
+const project = entry.data;
+---
+
+<BasePageLayout title={project.title}>
+  <article>
+    <h1>{project.title}</h1>
+    <span>{project.createdAt.toLocaleDateString()}</span>
+    <Content />
+  </article>
+</BasePageLayout>
+
+<style lang="scss">
+  article {
+    width: 80ch;
+    margin: auto;
+  }
+</style>

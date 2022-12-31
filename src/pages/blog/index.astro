@@ -1,15 +1,14 @@
 ---
-import type { MarkdownInstance } from 'astro';
+import { CollectionEntry, getCollection } from 'astro:content';
 import PageCard from '../../components/PageCard.astro';
 import Tag from '../../components/Tag.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import type { Post } from '../../types';
 
-const posts = (await Astro.glob<Post>('./*/*.md')).sort((a, b) => +b.frontmatter.id - +a.frontmatter.id);
-const postsByYear = new Map<number, MarkdownInstance<Post>[]>();
+const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id);
+const postsByYear = new Map<number, CollectionEntry<'blog'>[]>();
 
 for (const post of posts) {
-  const year = new Date(post.frontmatter.createdAt).getFullYear();
+  const year = new Date(post.data.createdAt).getFullYear();
 
   if (!postsByYear.has(year)) {
     postsByYear.set(year, []);

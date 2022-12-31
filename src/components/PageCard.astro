@@ -1,16 +1,16 @@
 ---
 import { Image } from '@astrojs/image/components';
-import type { MarkdownInstance } from 'astro';
-import type { Post, Project } from '../types';
+import { CollectionEntry } from 'astro:content';
 import Tag from './Tag.astro';
 import TimeLabel from './TimeLabel.svelte';
 
-const page: MarkdownInstance<Post | Project> = Astro.props.page;
-const description = page.frontmatter.description ?? getDescriptionFromContent();
+const page: CollectionEntry<'blog'> | CollectionEntry<'projects'> = Astro.props.page;
+const description = page.data.description ?? getDescriptionFromContent();
+const pageUrl = page.data.url || `/${page.collection}/${page.slug}`;
 
 function getDescriptionFromContent(): string {
   const maxLength = 160;
-  const rawText = page.compiledContent().replace(/<\/?[^>]+(>|$)/g, '');
+  const rawText = page.body.replace(/<\/?[^>]+(>|$)/g, '');
 
   // Return the raw text content of the page if its lenght doesn't exceed the description's max length.
   if (rawText.length <= maxLength) {
@@ -24,45 +24,40 @@ function getDescriptionFromContent(): string {
 ---
 
 <li class="card">
-  <TimeLabel
-    className="time-label"
-    date={new Date(page.frontmatter.createdAt)}
-    monthFormat={'short'}
-    dayFormat={'2-digit'}
-  />
+  <TimeLabel className="time-label" date={new Date(page.data.createdAt)} monthFormat={'short'} dayFormat={'2-digit'} />
 
   <div>
     <div class="card-content">
       <!-- This link is enlarged to fit the whole card using an absolutely positioned pseudo element. -->
-      <a class="card-link" href={page.url}></a>
+      <a class="card-link" href={pageUrl}></a>
 
       <h2 class="title">
-        <a href={page.url}>{page.frontmatter.title}</a>
+        <a href={pageUrl}>{page.data.title}</a>
       </h2>
 
       {
-        page.frontmatter.tags && (
+        page.data.tags && (
           <ul class="tags">
-            {page.frontmatter.tags.map((tag) => (
+            {page.data.tags.map((tag) => (
               <Tag className="page-tag" name={tag} type="blog" />
             ))}
           </ul>
         )
       }
 
-      <p class="description"><a href={page.url}>{description}</a></p>
+      <p class="description"><a href={pageUrl}>{description}</a></p>
     </div>
 
     {
-      page.frontmatter.thumbnail && (
-        <a class="thumbnail" href={page.url}>
+      page.data.thumbnail && (
+        <a class="thumbnail" href={pageUrl}>
           <Image
-            src={page.frontmatter.thumbnail.src}
-            alt={page.frontmatter.thumbnail.alt}
-            width={page.frontmatter.thumbnail.width}
-            height={page.frontmatter.thumbnail.height}
-            format={page.frontmatter.thumbnail.format}
-            aspectRatio={page.frontmatter.thumbnail.aspectRatio}
+            src={page.data.thumbnail.src}
+            alt={page.data.thumbnail.alt}
+            width={page.data.thumbnail.width}
+            height={page.data.thumbnail.height}
+            format={page.data.thumbnail.format}
+            aspectRatio={page.data.thumbnail.aspectRatio}
           />
         </a>
       )

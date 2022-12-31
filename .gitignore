@@ -18,3 +18,6 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# other
+src/content/types.generated.d.ts

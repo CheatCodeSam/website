@@ -1,8 +1,11 @@
 ---
-import type { Post, Project } from '../types';
+import { getCollection } from 'astro:content';
 import SearchBar from './SearchBar.svelte';
-const pages = (await Astro.glob<Post | Project>('../pages/*/*/*.md')).sort(
-  (a, b) => +b.frontmatter.id - +a.frontmatter.id
+
+const posts = await getCollection('blog');
+const projects = await getCollection('projects');
+const pages = [...posts, ...projects].sort((a, b) =>
+  a.collection === 'blog' && b.collection === 'blog' ? b.data.id - a.data.id : +b.data.createdAt - +a.data.createdAt
 );
 ---
 
