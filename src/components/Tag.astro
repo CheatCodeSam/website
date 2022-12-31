@@ -1,13 +1,15 @@
 ---
 interface Props {
+  className?: string;
   name: string;
   type: 'blog' | 'project';
 }
 
-const { name, type } = Astro.props;
+const { className = '', name, type } = Astro.props;
+const classList = ['tag', ...className.split(' ')];
 ---
 
-<a class="tag" href={`/${type}?tags=${name}`}>#{name}</a>
+<a class={classList.join(' ')} href={`/${type}?tags=${name}`}>#{name}</a>
 
 <style lang="scss">
   .tag {

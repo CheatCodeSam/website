@@ -21,7 +21,6 @@
 <style lang="scss">
   time {
     font-size: 1.2em;
-    opacity: 0.5;
     font-family: monospace;
   }
 </style>
