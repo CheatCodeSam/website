@@ -2,6 +2,7 @@ export type Post = {
   id: string;
   title: string;
   description: string;
+  tags: string[];
   createdAt: Date;
   thumbnail?: {
     src: string;
@@ -17,6 +18,7 @@ export type Project = {
   id: string;
   title: string;
   description: string;
+  tags: string[];
   createdAt: Date;
   thumbnail?: {
     src: string;

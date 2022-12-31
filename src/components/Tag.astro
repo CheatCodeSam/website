@@ -1,0 +1,24 @@
+---
+interface Props {
+  name: string;
+  type: 'blog' | 'project';
+}
+
+const { name, type } = Astro.props;
+---
+
+<a class="tag" href={`/${type}?tags=${name}`}>#{name}</a>
+
+<style lang="scss">
+  .tag {
+    display: inline;
+    padding: 0.3em 0.45em;
+    font-size: 1.1em;
+    font-weight: bold;
+    background: rgba(var(--accent-rgb), 12%);
+    color: var(--accent);
+    border-radius: 0.4rem;
+    text-decoration: none;
+    font-family: monospace;
+  }
+</style>
