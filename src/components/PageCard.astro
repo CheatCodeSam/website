@@ -29,7 +29,7 @@ function getDescriptionFromContent(): string {
   <div>
     <div class="card-content">
       <!-- This link is enlarged to fit the whole card using an absolutely positioned pseudo element. -->
-      <a class="card-link" href={pageUrl}></a>
+      <a class="card-link" href={pageUrl} aria-label={`Read blog post titled: "${page.data.title}`}></a>
 
       <h2 class="title">
         <a href={pageUrl}>{page.data.title}</a>
@@ -39,7 +39,9 @@ function getDescriptionFromContent(): string {
         page.data.tags && (
           <ul class="tags">
             {page.data.tags.map((tag) => (
-              <Tag className="page-tag" name={tag} type="blog" />
+              <li class="tags-item">
+                <Tag name={tag} type="blog" />
+              </li>
             ))}
           </ul>
         )
@@ -82,6 +84,12 @@ function getDescriptionFromContent(): string {
       margin: 0.25rem 0;
       gap: 2ch;
       flex-wrap: wrap;
+
+      li.tags-item {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
     }
   }
 
@@ -146,7 +154,7 @@ function getDescriptionFromContent(): string {
   }
 
   h2.title,
-  .page-tag,
+  li.tags-item,
   p.description {
     z-index: 1;
   }
