@@ -1,12 +1,8 @@
 ---
 import type { MarkdownInstance } from 'astro';
+import PostPreview from '../../components/PostPreview.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-
-type Post = {
-  id: string;
-  title: string;
-  createdAt: Date;
-};
+import type { Post } from '../../types';
 
 const posts = (await Astro.glob<Post>('./*/*.md')).sort((a, b) => +b.frontmatter.id - +a.frontmatter.id);
 const postsByYear = new Map<number, MarkdownInstance<Post>[]>();
@@ -28,7 +24,7 @@ for (const post of posts) {
       This is my personal blog where I show my journey as a developer while exploring various science and technology
       topics that interest me.
     </p>
-    <p>Occasionally I may also make some devlogs and tutorials when I find a good topic.</p>
+    <p>Occasionally I may also make some <code>#devlog</code>s and <code>#tutorial</code>s when I find a good topic.</p>
   </header>
 
   <div class="posts">
@@ -38,9 +34,7 @@ for (const post of posts) {
           <h2>{year}</h2>
           <ul>
             {posts.map((post) => (
-              <li>
-                <a href={post.url}>{post.frontmatter.title}</a>
-              </li>
+              <PostPreview post={post} />
             ))}
           </ul>
         </div>
@@ -52,7 +46,7 @@ for (const post of posts) {
 <style lang="scss">
   header,
   .posts {
-    max-width: 80ch;
+    max-width: 100ch;
     width: 100%;
     padding: 0 1rem;
     box-sizing: border-box;
@@ -66,5 +60,14 @@ for (const post of posts) {
   header p {
     font-size: 1.25em;
     color: gray;
+  }
+
+  .post-group ul {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0;
+    margin: 0;
   }
 </style>

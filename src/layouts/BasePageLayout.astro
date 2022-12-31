@@ -22,7 +22,7 @@ const { title } = Astro.props;
     <slot />
     <style is:global>
       :root {
-        --accent-rgb: 124, 58, 237;
+        --accent-rgb: 0, 125, 250;
         --accent: rgb(var(--accent-rgb));
         --accent-gradient: linear-gradient(45deg, var(--accent), #da62c4 30%, white 60%);
         --bg-rgb: 246, 246, 246;
@@ -37,11 +37,17 @@ const { title } = Astro.props;
         margin: 0;
         padding-top: 3rem;
         box-sizing: border-box;
-        font-size: 1.1em;
+        font-size: 1em;
       }
       code {
         font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono,
           Courier New, monospace;
+        font-size: 0.8em;
+        font-weight: bold;
+        background: rgba(var(--accent-rgb), 12%);
+        color: var(--accent);
+        border-radius: 4px;
+        padding: 0.3em 0.45em;
       }
     </style>
   </body>
