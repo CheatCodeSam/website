@@ -1,3 +1,11 @@
+---
+import type { Post, Project } from '../types';
+import SearchBar from './SearchBar.svelte';
+const pages = (await Astro.glob<Post | Project>('../pages/*/*/*.md')).sort(
+  (a, b) => +b.frontmatter.id - +a.frontmatter.id
+);
+---
+
 <nav>
   <ul>
     <li>
@@ -10,6 +18,12 @@
       <a href="/blog">Blog</a>
     </li>
   </ul>
+
+  <div class="search-bar-container">
+    <SearchBar client:load items={pages} />
+  </div>
+
+  <div class="whitespace"></div>
 </nav>
 
 <style lang="scss">
@@ -18,15 +32,26 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 3rem;
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 3rem;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    margin: auto;
     background-color: var(--bg);
+    z-index: 10;
+  }
+
+  ul,
+  .whitespace {
+    flex: 1;
   }
 
   ul {
-    flex: 1;
     display: flex;
-    justify-content: center;
+    justify-content: start;
     align-items: center;
     height: 100%;
     gap: 1rem;
@@ -42,5 +67,11 @@
         color: var(--accent);
       }
     }
+  }
+
+  .search-bar-container {
+    width: 100ch;
+    padding: 0 1rem;
+    box-sizing: border-box;
   }
 </style>
