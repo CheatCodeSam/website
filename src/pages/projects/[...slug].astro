@@ -1,28 +1,26 @@
 ---
-import { CollectionEntry, getCollection } from 'astro:content';
+import { getCollection } from 'astro:content';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
 
-export async function getStaticPaths() {
-  const projects = await getCollection('projects');
-  return projects.map((entry) => ({
-    params: { slug: entry.slug },
-    props: { entry },
-  }));
+const { slug } = Astro.params;
+const projects = await getCollection('projects');
+const project = projects.find((project) => project.data.id === +slug!.split('/')[0]);
+
+if (!project) {
+  return Astro.redirect('/404');
 }
 
-interface Props {
-  entry: CollectionEntry<'projects'>;
+if (project.slug !== slug) {
+  return Astro.redirect(`/projects/${project.slug}`);
 }
 
-const { entry } = Astro.props;
-const { Content } = await entry.render();
-const project = entry.data;
+const { Content } = await project.render();
 ---
 
-<BasePageLayout title={project.title}>
+<BasePageLayout title={project.data.title}>
   <article>
-    <h1>{project.title}</h1>
-    <span>{project.createdAt.toLocaleDateString()}</span>
+    <h1>{project.data.title}</h1>
+    <span>{project.data.createdAt.toLocaleDateString()}</span>
     <Content />
   </article>
 </BasePageLayout>
