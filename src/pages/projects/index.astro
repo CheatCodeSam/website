@@ -1,20 +1,50 @@
 ---
+import type { MarkdownInstance } from 'astro';
+import PageCard from '../../components/PageCard.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
+import type { Project } from '../../types';
+
+const projects = (await Astro.glob<Project>('./*/*.md')).sort(
+  (a, b) => +b.frontmatter.createdAt - +a.frontmatter.createdAt
+);
+const projectsByYear = new Map<number, MarkdownInstance<Project>[]>();
+
+for (const project of projects) {
+  const year = new Date(project.frontmatter.createdAt).getFullYear();
+
+  if (!projectsByYear.has(year)) {
+    projectsByYear.set(year, []);
+  }
+  projectsByYear.get(year)?.push(project);
+}
 ---
 
-<BasePageLayout title="Projects">
+<BasePageLayout title="Project">
   <header>
-    <h1>Projects</h1>
+    <h1>Project</h1>
     <p>Discover my projects and try them out for yourself!</p>
   </header>
 
-  <div class="projects"></div>
+  <div class="projects">
+    {
+      [...projectsByYear.entries()].map(([year, projects]) => (
+        <div class="project-group">
+          <h2>{year}</h2>
+          <ul>
+            {projects.map((project) => (
+              <PageCard page={project} />
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
 </BasePageLayout>
 
 <style lang="scss">
   header,
-  .posts {
-    max-width: 80ch;
+  .projects {
+    max-width: 100ch;
     width: 100%;
     padding: 0 1rem;
     box-sizing: border-box;
@@ -28,5 +58,14 @@ import BasePageLayout from '../../layouts/BasePageLayout.astro';
   header p {
     font-size: 1.25em;
     color: gray;
+  }
+
+  .project-group ul {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0;
+    margin: 0;
   }
 </style>

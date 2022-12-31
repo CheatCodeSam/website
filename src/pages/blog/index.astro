@@ -1,6 +1,7 @@
 ---
 import type { MarkdownInstance } from 'astro';
-import PostPreview from '../../components/PostPreview.astro';
+import PageCard from '../../components/PageCard.astro';
+import Tag from '../../components/Tag.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
 import type { Post } from '../../types';
 
@@ -24,7 +25,10 @@ for (const post of posts) {
       This is my personal blog where I show my journey as a developer while exploring various science and technology
       topics that interest me.
     </p>
-    <p>Occasionally I may also make some <code>#devlog</code>s and <code>#tutorial</code>s when I find a good topic.</p>
+    <p>
+      Occasionally I may also make some <Tag name="Devlog" type="blog" />s and <Tag name="Tutorial" type="blog" />s when
+      I find a good topic.
+    </p>
   </header>
 
   <div class="posts">
@@ -34,7 +38,7 @@ for (const post of posts) {
           <h2>{year}</h2>
           <ul>
             {posts.map((post) => (
-              <PostPreview post={post} />
+              <PageCard page={post} />
             ))}
           </ul>
         </div>

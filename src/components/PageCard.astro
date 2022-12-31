@@ -1,23 +1,18 @@
 ---
 import { Image } from '@astrojs/image/components';
 import type { MarkdownInstance } from 'astro';
-import type { Post } from '../types';
+import type { Post, Project } from '../types';
 import Tag from './Tag.astro';
 import TimeLabel from './TimeLabel.svelte';
 
-const post: MarkdownInstance<Post> = Astro.props.post;
-const description = post.frontmatter.description ?? getDescriptionFromPostContent();
-// For example: Dec 06
-const formattedDate = new Date(post.frontmatter.createdAt).toLocaleDateString('en-US', {
-  month: 'short',
-  day: '2-digit',
-});
+const page: MarkdownInstance<Post | Project> = Astro.props.page;
+const description = page.frontmatter.description ?? getDescriptionFromContent();
 
-function getDescriptionFromPostContent(): string {
+function getDescriptionFromContent(): string {
   const maxLength = 160;
-  const rawText = post.compiledContent().replace(/<\/?[^>]+(>|$)/g, '');
+  const rawText = page.compiledContent().replace(/<\/?[^>]+(>|$)/g, '');
 
-  // Return the raw text content of the post if its lenght doesn't exceed the description's max length.
+  // Return the raw text content of the page if its lenght doesn't exceed the description's max length.
   if (rawText.length <= maxLength) {
     return rawText;
   }
@@ -28,46 +23,46 @@ function getDescriptionFromPostContent(): string {
 }
 ---
 
-<li class="post-preview">
+<li class="card">
   <TimeLabel
     className="time-label"
-    date={new Date(post.frontmatter.createdAt)}
+    date={new Date(page.frontmatter.createdAt)}
     monthFormat={'short'}
     dayFormat={'2-digit'}
   />
 
   <div>
-    <div class="preview-content">
+    <div class="card-content">
       <!-- This link is enlarged to fit the whole card using an absolutely positioned pseudo element. -->
-      <a class="post-link" href={post.url}></a>
+      <a class="card-link" href={page.url}></a>
 
       <h2 class="title">
-        <a href={post.url}>{post.frontmatter.title}</a>
+        <a href={page.url}>{page.frontmatter.title}</a>
       </h2>
 
       {
-        post.frontmatter.tags && (
+        page.frontmatter.tags && (
           <ul class="tags">
-            {post.frontmatter.tags.map((tag) => (
-              <Tag className="post-tag" name={tag} type="blog" />
+            {page.frontmatter.tags.map((tag) => (
+              <Tag className="page-tag" name={tag} type="blog" />
             ))}
           </ul>
         )
       }
 
-      <p class="description"><a href={post.url}>{description}</a></p>
+      <p class="description"><a href={page.url}>{description}</a></p>
     </div>
 
     {
-      post.frontmatter.thumbnail && (
-        <a class="thumbnail" href={post.url}>
+      page.frontmatter.thumbnail && (
+        <a class="thumbnail" href={page.url}>
           <Image
-            src={post.frontmatter.thumbnail.src}
-            alt={post.frontmatter.thumbnail.alt}
-            width={post.frontmatter.thumbnail.width}
-            height={post.frontmatter.thumbnail.height}
-            format={post.frontmatter.thumbnail.format}
-            aspectRatio={post.frontmatter.thumbnail.aspectRatio}
+            src={page.frontmatter.thumbnail.src}
+            alt={page.frontmatter.thumbnail.alt}
+            width={page.frontmatter.thumbnail.width}
+            height={page.frontmatter.thumbnail.height}
+            format={page.frontmatter.thumbnail.format}
+            aspectRatio={page.frontmatter.thumbnail.aspectRatio}
           />
         </a>
       )
@@ -80,7 +75,7 @@ function getDescriptionFromPostContent(): string {
   $borderRadius: 0.6rem;
   $timeLabelWidth: 6ch;
 
-  .post-preview {
+  .card {
     display: flex;
     gap: $gap;
     list-style: none;
@@ -99,7 +94,7 @@ function getDescriptionFromPostContent(): string {
     color: inherit;
     text-decoration: none;
 
-    &.post-link::before {
+    &.card-link::before {
       content: '';
       position: absolute;
       top: 0;
@@ -117,7 +112,7 @@ function getDescriptionFromPostContent(): string {
     min-width: $timeLabelWidth;
   }
 
-  .post-preview > div {
+  .card > div {
     flex: 1;
     display: flex;
     gap: 1rem;
@@ -125,7 +120,7 @@ function getDescriptionFromPostContent(): string {
     box-sizing: border-box;
   }
 
-  .preview-content {
+  .card-content {
     position: relative;
     flex: 1;
     padding: 1rem 0;
@@ -155,7 +150,7 @@ function getDescriptionFromPostContent(): string {
   }
 
   h2.title,
-  .post-tag,
+  .page-tag,
   p.description {
     z-index: 1;
   }
@@ -197,7 +192,7 @@ function getDescriptionFromPostContent(): string {
   }
 
   @media only screen and (max-width: 640px) {
-    .post-preview > div {
+    .card > div {
       flex-direction: column;
     }
 
