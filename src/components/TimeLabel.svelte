@@ -21,7 +21,7 @@
 
 <style lang="scss">
   time {
-    font-size: 1.2em;
-    font-family: monospace;
+    font-size: 0.9em;
+    font-family: 'Fira Code', monospace;
   }
 </style>
