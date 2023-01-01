@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import { localOrRemoteSrcToUrl } from '../../utils';
+import { getDescriptionFromText, localOrRemoteSrcToUrl } from '../../utils';
 
 const { slug } = Astro.params;
 const projects = await getCollection('projects');
@@ -21,7 +21,12 @@ const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
 ---
 
-<BasePageLayout title={title} metaDescription={description} metaKeywords={tags} metaImageSrc={imgSrc}>
+<BasePageLayout
+  title={title}
+  metaDescription={description ?? getDescriptionFromText(project.body, 160)}
+  metaKeywords={tags}
+  metaImageSrc={imgSrc}
+>
   <article>
     <h1>{title}</h1>
     <span>{createdAt.toLocaleDateString()}</span>

@@ -1,26 +1,13 @@
 ---
 import { Image } from '@astrojs/image/components';
 import type { CollectionEntry } from 'astro:content';
+import { getDescriptionFromText } from '../utils';
 import Tag from './Tag.astro';
 import TimeLabel from './TimeLabel.svelte';
 
 const page: CollectionEntry<'blog'> | CollectionEntry<'projects'> = Astro.props.page;
-const description = page.data.description ?? getDescriptionFromContent();
+const description = page.data.description ?? getDescriptionFromText(page.body, 160);
 const pageUrl = page.data.url || `/${page.collection}/${page.slug}`;
-
-function getDescriptionFromContent(): string {
-  const maxLength = 160;
-  const rawText = page.body.replace(/<\/?[^>]+(>|$)/g, '');
-
-  // Return the raw text content of the page if its lenght doesn't exceed the description's max length.
-  if (rawText.length <= maxLength) {
-    return rawText;
-  }
-
-  // Truncate the text to the last word within the length limit and add dots to show that the text continues.
-  const truncated = rawText.slice(0, 160);
-  return truncated.substring(0, truncated.lastIndexOf(' ')) + '…';
-}
 ---
 
 <li class="card">

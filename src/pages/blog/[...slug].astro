@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Tag from '../../components/Tag.astro';
 import TimeLabel from '../../components/TimeLabel.svelte';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import { localOrRemoteSrcToUrl } from '../../utils';
+import { getDescriptionFromText, localOrRemoteSrcToUrl } from '../../utils';
 
 const { slug } = Astro.params;
 const posts = await getCollection('blog');
@@ -23,7 +23,12 @@ const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
 ---
 
-<BasePageLayout title={title} metaDescription={description} metaKeywords={tags} metaImageSrc={imgSrc}>
+<BasePageLayout
+  title={title}
+  metaDescription={description ?? getDescriptionFromText(post.body, 160)}
+  metaKeywords={tags}
+  metaImageSrc={imgSrc}
+>
   <article class="blog-post">
     <header>
       <h1 class="title">{title}</h1>

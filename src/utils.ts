@@ -1,3 +1,14 @@
+export function getDescriptionFromText(text: string, maxLength: number): string {
+  // Return the raw text content of the page if its lenght doesn't exceed the description's max length.
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  // Truncate the text to the last word within the length limit and add dots to show that the text continues.
+  const truncated = text.slice(0, 160);
+  return truncated.substring(0, truncated.lastIndexOf(' ')) + '…';
+}
+
 export function localOrRemoteSrcToUrl(currUrl: URL, src: string) {
   return new URL(isValidUrl(src) ? src : currUrl.origin + src);
 }
