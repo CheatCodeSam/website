@@ -5,9 +5,10 @@
     yearFormat?: 'numeric' | '2-digit';
     monthFormat?: 'short' | 'long' | 'numeric' | '2-digit' | 'narrow';
     dayFormat?: 'numeric' | '2-digit';
+    prefix?: string;
   }
 
-  export let { className, date, yearFormat, monthFormat, dayFormat }: Props = {};
+  export let { className, date, yearFormat, monthFormat, dayFormat, prefix = '' }: Props = {};
 
   $: formattedDate = date?.toLocaleDateString('en-US', {
     year: yearFormat,
@@ -16,7 +17,7 @@
   });
 </script>
 
-<time class={className} datetime={date?.toString()}>{formattedDate}</time>
+<time class={className} datetime={date?.toString()}>{prefix}{formattedDate}</time>
 
 <style lang="scss">
   time {

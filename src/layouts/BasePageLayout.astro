@@ -30,7 +30,9 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
 
   <body>
     <Nav />
+
     <slot />
+
     <style is:global>
       :root {
         --accent-rgb: 0, 125, 250;
@@ -39,10 +41,12 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         --bg-rgb: 246, 246, 246;
         --bg: rgb(var(--bg-rgb));
       }
+
       html {
         font-family: system-ui, sans-serif;
         background-color: var(--bg);
       }
+
       body {
         min-height: 100vh;
         margin: 0;
@@ -50,15 +54,22 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         box-sizing: border-box;
         font-size: 1em;
       }
-      code {
+
+      :not(pre) > code {
         font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono,
           Courier New, monospace;
         font-size: 0.8em;
         font-weight: bold;
-        background: rgba(var(--accent-rgb), 12%);
-        color: var(--accent);
+        background: rgba(255, 200, 200, 12%);
+        color: #dd5555;
         border-radius: 4px;
         padding: 0.3em 0.45em;
+      }
+
+      pre.astro-code {
+        padding: 1rem;
+        box-sizing: border-box;
+        border-radius: 0.6rem;
       }
     </style>
   </body>

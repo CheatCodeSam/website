@@ -1,5 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
+import Tag from '../../components/Tag.astro';
+import TimeLabel from '../../components/TimeLabel.svelte';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
 import { localOrRemoteSrcToUrl } from '../../utils';
 
@@ -22,16 +24,93 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 ---
 
 <BasePageLayout title={title} metaDescription={description} metaKeywords={tags} metaImageSrc={imgSrc}>
-  <article>
-    <h1>{title}</h1>
-    <span>{createdAt.toLocaleDateString()}</span>
-    <Content />
+  <article class="blog-post">
+    <header>
+      <h1 class="title">{title}</h1>
+
+      {description && <p class="description">{description}</p>}
+
+      {
+        tags && (
+          <ul class="tags">
+            {tags.map((tag) => (
+              <li class="tags-item">
+                <Tag name={tag} type="blog" />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+
+      {
+        thumbnail && (
+          <img
+            class="thumbnail"
+            src={thumbnail.src}
+            alt={thumbnail.alt}
+            style={`aspect-ratio: ${thumbnail.aspectRatio?.replace(':', ' / ')}`}
+          />
+        )
+      }
+
+      <TimeLabel
+        date={createdAt}
+        prefix="Published "
+        yearFormat={'numeric'}
+        monthFormat={'long'}
+        dayFormat={'numeric'}
+      />
+    </header>
+
+    <main class="post-content">
+      <Content />
+    </main>
   </article>
 </BasePageLayout>
 
-<style lang="scss">
-  article {
-    width: 80ch;
+<style lang="scss" is:global>
+  article.blog-post {
+    max-width: 100ch;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
     margin: auto;
+
+    h1.title {
+      font-size: 2em;
+    }
+
+    ul.tags {
+      display: flex;
+      padding: 0;
+      margin: 1rem 0;
+      gap: 2ch;
+      flex-wrap: wrap;
+
+      li.tags-item {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+    }
+
+    p.description {
+      font-size: 1.25em;
+      color: gray;
+    }
+
+    .thumbnail {
+      width: 100%;
+      border-radius: 1.2rem;
+    }
+
+    main {
+      font-size: 1.1em;
+      padding-bottom: 1rem;
+
+      a {
+        color: #1188ee;
+      }
+    }
   }
 </style>

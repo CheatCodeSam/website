@@ -12,4 +12,10 @@ export default defineConfig({
   experimental: {
     contentCollections: true,
   },
+  markdown: {
+    shikiConfig: {
+      theme: 'github-dark',
+      wrap: true,
+    },
+  },
 });
