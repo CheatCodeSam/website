@@ -1,6 +1,10 @@
 ---
 import BasePageLayout from '../layouts/BasePageLayout.astro';
-import Card from '../components/Card.astro';
+import PageCard from '../components/PageCard.astro';
+import { getCollection } from 'astro:content';
+
+const projects = (await getCollection('projects')).sort((a, b) => b.data.id - a.data.id);
+const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id);
 ---
 
 <BasePageLayout
@@ -8,63 +12,109 @@ import Card from '../components/Card.astro';
   metaDescription="This is my personal website where I showcase my projects and write about whatever interests me from science, math and programming, to game development, music and art."
   metaKeywords={['Programming', 'Web development', 'Technology', 'Science', 'Games', 'Game development', 'Art']}
 >
-    <h1>Welcome to <span class="text-gradient">Gamitopia</span></h1>
-    <p class="instructions">
-      <strong>Gamitopia</strong> is my place for showcasing my projects, writing about topics that interest me and showing
-      my journey as a developer.
+  <header>
+    <h1>Welcome to my website!</h1>
+    <p>
+      This is my personal website where I showcase my projects and write about whatever interests me from science, math
+      and programming, to game development, music and art.
     </p>
-    <ul role="list" class="link-card-grid">
-      <Card href="/projects" title="Projects" body="Discover my projects and try them out!" />
-      <Card
-        href="/blog"
-        title="Blog"
-        body="Explore various interesting topics and go through my journey as a developer."
-      />
-    </ul>
+    <p>Feel free to check out my <a href="/projects">projects</a> and my <a href="/blog">blog</a>!</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Recent blog posts</h2>
+      <ul>
+        {posts.slice(0, 3).map((post) => <PageCard page={post} />)}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Recent projects</h2>
+      <ul>
+        {projects.slice(0, 3).map((project) => <PageCard page={project} />)}
+      </ul>
+    </section>
+
+    <section>
+      <h2>About</h2>
+
+      <p>
+        I'm a high school student who is interested in various different things such as science, technology, web
+        development, art, games and game development. I aim to build up my skills and knowledge in all of these areas,
+        and this website is where I intend to show my work and progress.
+      </p>
+
+      <h3>Website</h3>
+
+      <p>
+        This website is made with <a href="https://astro.build/">Astro</a>, as it seems like the perfect fit for my
+        needs. It's incredibly fast and lightweight, and its content-focused approach is great for my blog. It also has
+        built-in support for using practically any UI frameworks, which makes it possible for me to add old projects
+        that I've made with different web technologies.
+      </p>
+
+      <p>
+        For scripts I use TypeScript, for styles I use SCSS, and for the blog I use Markdown/<a
+          href="https://mdxjs.com/">MDX</a
+        > with Astro's <a href="https://docs.astro.build/en/guides/content-collections/">content collections</a>.
+      </p>
+    </section>
   </main>
 </BasePageLayout>
 
-<style>
-  main {
-    margin: auto;
-    padding: 1.5rem;
-    max-width: 80ch;
+<style lang="scss">
+  header,
+  section {
+    width: 100%;
+
+    > * {
+      max-width: 64rem;
+      width: 100%;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      box-sizing: border-box;
+      margin-left: auto;
+      margin-right: auto;
+    }
   }
+
   h1 {
-    font-size: 3rem;
-    font-weight: 800;
-    margin: 0;
+    font-size: 2.5em;
   }
-  .text-gradient {
-    background-image: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 400%;
-    background-position: 0%;
+
+  header {
+    padding-bottom: 1rem;
   }
-  .instructions {
-    line-height: 1.6;
-    margin: 1rem 0;
-    border: 1px solid rgba(var(--accent-rgb), 25%);
-    background-color: white;
-    padding: 1rem;
-    border-radius: 0.4rem;
+
+  header p {
+    font-size: 1.1em;
+    color: #666677;
   }
-  .instructions code {
-    font-size: 0.875em;
-    font-weight: bold;
-    background: rgba(var(--accent-rgb), 12%);
-    color: var(--accent);
-    border-radius: 4px;
-    padding: 0.3em 0.45em;
+
+  section {
+    padding: 1rem 0;
   }
-  .instructions strong {
-    color: var(--accent);
+
+  h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 2em;
   }
-  .link-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(30ch, 1fr));
+
+  h3 {
+    font-size: 1.4em;
+  }
+
+  ul {
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
-    padding: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  p {
+    color: #444455;
   }
 </style>
