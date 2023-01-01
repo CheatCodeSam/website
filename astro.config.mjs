@@ -4,6 +4,8 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import image from '@astrojs/image';
 import svelte from '@astrojs/svelte';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 // https://astro.build/config
 export default defineConfig({
@@ -17,5 +19,8 @@ export default defineConfig({
       theme: 'github-dark',
       wrap: true,
     },
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeKatex],
   },
+  extendDefaultPlugins: true,
 });
