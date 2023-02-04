@@ -1,6 +1,8 @@
 @mixin theme-variables {
-  --accent-rgb: 0, 155, 255;
-  --accent: rgb(var(--accent-rgb));
+  --accent-1-rgb: 0, 200, 255;
+  --accent-1: rgb(var(--accent-1-rgb));
+  --accent-2-rgb: 0, 255, 170;
+  --accent-2: rgb(var(--accent-2-rgb));
   --bg-1-rgb: 30, 30, 35;
   --bg-1: rgb(var(--bg-1-rgb));
   --bg-2-rgb: 45, 45, 50;

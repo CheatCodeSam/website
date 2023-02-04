@@ -67,20 +67,25 @@ const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id
   header,
   section {
     width: 100%;
+  }
 
-    > * {
-      max-width: 50rem;
-      width: 100%;
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-      box-sizing: border-box;
-      margin-left: auto;
-      margin-right: auto;
-    }
+  header,
+  section > * {
+    max-width: 50rem;
+    width: 100%;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    box-sizing: border-box;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   h1 {
     font-size: 2.5em;
+    width: fit-content;
+    background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   header {
@@ -104,10 +109,12 @@ const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id
     margin-top: 0;
     margin-bottom: 1.5rem;
     font-size: 2em;
+    color: var(--accent-1);
   }
 
   h3 {
     font-size: 1.4em;
+    color: var(--accent-2);
   }
 
   ul {

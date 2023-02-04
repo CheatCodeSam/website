@@ -51,7 +51,7 @@
       top: 50%;
       width: 1.6rem;
       height: 1.6rem;
-      background-color: rgba(var(--accent-rgb), 0.8);
+      background-color: rgba(var(--accent-1-rgb), 0.8);
       border-radius: 50%;
       z-index: 0;
       transition: opacity 200ms;
