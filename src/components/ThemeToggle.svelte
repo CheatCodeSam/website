@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { getPreferredTheme, theme, toggleTheme } from '../stores';
 
-  $: currentTheme = $theme === 'auto' && window ? getPreferredTheme() : $theme;
+  let mounted = false;
+  $: currentTheme = $theme === 'auto' && mounted ? getPreferredTheme() : $theme;
+
+  onMount(() => (mounted = true));
 </script>
 
 <button class="theme-toggle" on:click={toggleTheme}>
