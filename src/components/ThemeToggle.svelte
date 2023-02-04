@@ -12,8 +12,8 @@
   <span style:filter={currentTheme !== 'light' ? 'grayscale(100%)' : ''}>☀️</span>
   <div
     class="pill"
-    style:translate={currentTheme === null ? '1rem -50%' : currentTheme === 'light' ? '0 -50%' : '2rem -50%'}
-    style:opacity={currentTheme === null ? '0' : '1'}
+    style:translate={currentTheme === 'auto' ? '1rem -50%' : currentTheme === 'light' ? '0 -50%' : '2rem -50%'}
+    style:opacity={currentTheme === 'auto' ? '0' : '1'}
   />
   <span style:filter={currentTheme !== 'dark' ? 'grayscale(100%)' : ''}>🌙</span>
 </button>
