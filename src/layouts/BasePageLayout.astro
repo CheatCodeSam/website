@@ -175,14 +175,15 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         margin: 0;
         padding-top: 4rem;
         box-sizing: border-box;
-        font-size: 1.1em;
+        font-size: 1.05em;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-weight: 400;
         background-color: var(--bg-1);
       }
 
-      p {
-        line-height: 1.5;
+      p,
+      ul {
+        line-height: 1.7em;
       }
 
       a {
@@ -208,6 +209,17 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         padding: 1rem;
         box-sizing: border-box;
         border-radius: 0.6rem;
+      }
+
+      @media only screen and (max-width: 1000px) {
+        body {
+          font-size: 0.9em;
+        }
+      }
+      @media only screen and (max-height: 700px) {
+        body {
+          font-size: 0.9em;
+        }
       }
     </style>
   </body>

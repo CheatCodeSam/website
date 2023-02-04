@@ -45,9 +45,9 @@ for (const project of projects) {
 <style lang="scss">
   header,
   .projects {
-    max-width: 64rem;
+    max-width: 50rem;
     width: 100%;
-    padding: 0 1rem;
+    padding: 0 1.5rem;
     box-sizing: border-box;
     margin: auto;
   }
@@ -61,10 +61,17 @@ for (const project of projects) {
     color: var(--text-color-2);
   }
 
+  .projects {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
   .project-group ul {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
     width: 100%;
     padding: 0;
     margin: 0;

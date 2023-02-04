@@ -76,11 +76,15 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
 <style lang="scss" is:global>
   article.blog-post {
-    max-width: 64rem;
+    max-width: 50rem;
     width: 100%;
-    padding: 0 1rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
     box-sizing: border-box;
     margin: auto;
+
+    :last-child {
+      margin-bottom: 0;
+    }
 
     h1.title {
       font-size: 2em;
@@ -108,15 +112,6 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
     .thumbnail {
       width: 100%;
       border-radius: 1.2rem;
-    }
-
-    main {
-      padding-bottom: 1rem;
-
-      p,
-      ul {
-        line-height: 1.5em;
-      }
     }
   }
 </style>
