@@ -89,7 +89,7 @@ const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id
 
   header p {
     font-size: 1.1em;
-    color: #666677;
+    color: var(--text-color-2);
   }
 
   section {
@@ -115,6 +115,6 @@ const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id
   }
 
   p {
-    color: #444455;
+    color: var(--text-color-2);
   }
 </style>

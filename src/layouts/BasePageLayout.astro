@@ -26,14 +26,72 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <meta name="og:title" property="og:title" content={title} />
     <meta name="og:description" property="og:description" content={metaDescription} />
     {metaImageSrc && <meta name="og:image" property="og:image" content={metaImageSrc} />}
+
+    <!-- Init theme  -->
+    <script is:inline>
+      const initialTheme = JSON.parse(localStorage.getItem('theme') ?? 'auto');
+      updateTheme(JSON.parse(localStorage.getItem('theme') ?? 'auto'));
+
+      function updateTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else if (theme === 'auto') {
+          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.remove('light');
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          }
+        }
+      }
+    </script>
+    <!-- Update theme when prefers-color-scheme changes -->
+    <script>
+      const theme = JSON.parse(localStorage.getItem('theme') ?? '"auto"');
+      // @ts-ignore
+      updateTheme(theme);
+
+      // Change theme when the theme store's value changes.
+      const { theme: themeStore } = await import('../stores');
+      themeStore.set(theme);
+
+      // Update theme when user's preferred color scheme changes (stored theme still overrides this).
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)');
+      prefersLight.addEventListener('change', (e) => {
+        if (e.matches && JSON.parse(localStorage.getItem('theme') ?? '"auto"') === 'auto') {
+          // @ts-ignore
+          themeStore.set(updateTheme('auto'));
+        }
+      });
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      prefersDark.addEventListener('change', (e) => {
+        if (e.matches && JSON.parse(localStorage.getItem('theme') ?? '"auto"') === 'auto') {
+          // @ts-ignore
+          themeStore.set(updateTheme('auto'));
+        }
+      });
+
+      // @ts-ignore
+      themeStore.subscribe((theme) => theme && updateTheme(theme));
+    </script>
+    <link rel="stylesheet" href="/themes/dark.scss" media="(prefers-color-scheme: dark)" />
+    <link rel="stylesheet" href="/themes/light.scss" media="(prefers-color-scheme: light)" />
   </head>
 
-  <body>
+  <body class="dark">
     <Nav />
 
     <slot />
 
-    <style is:global>
+    <style lang="scss" is:global>
+      @use '../../public/themes/light.scss';
+      @use '../../public/themes/dark.scss';
+
       /* For browsers that support variable fonts */
       @supports (font-variation-settings: normal) {
         @font-face {
@@ -100,17 +158,16 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       }
 
       :root {
-        --accent-rgb: 0, 100, 200;
-        --accent: rgb(var(--accent-rgb));
-        --accent-gradient: linear-gradient(45deg, var(--accent), #da62c4 30%, white 60%);
-        --bg-rgb: 246, 246, 246;
-        --bg: rgb(var(--bg-rgb));
-      }
+        color-scheme: light dark;
+        color: var(--text-color-1);
 
-      html {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        font-weight: 400;
-        background-color: var(--bg);
+        &.light {
+          @include light.theme-variables;
+        }
+
+        &.dark {
+          @include dark.theme-variables;
+        }
       }
 
       body {
@@ -119,6 +176,9 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         padding-top: 4rem;
         box-sizing: border-box;
         font-size: 1.1em;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-weight: 400;
+        background-color: var(--bg-1);
       }
 
       p {
@@ -126,7 +186,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       }
 
       a {
-        color: #1166dd;
+        color: var(--link-color);
       }
 
       code {

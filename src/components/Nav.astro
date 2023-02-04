@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import SearchBar from './SearchBar.svelte';
+import ThemeToggle from './ThemeToggle.svelte';
 
 const posts = await getCollection('blog');
 const projects = await getCollection('projects');
@@ -26,7 +27,9 @@ const pages = [...posts, ...projects].sort((a, b) =>
     <SearchBar client:load items={pages} />
   </div>
 
-  <div class="whitespace"></div>
+  <div class="theme-toggle-container">
+    <ThemeToggle client:load />
+  </div>
 </nav>
 
 <style lang="scss">
@@ -43,16 +46,13 @@ const pages = [...posts, ...projects].sort((a, b) =>
     padding: 0 1rem;
     box-sizing: border-box;
     margin: auto;
-    background-color: var(--bg);
+    background-color: rgba(var(--bg-1-rgb), 0.6);
+    backdrop-filter: blur(0.2rem);
     z-index: 10;
   }
 
-  ul,
-  .whitespace {
-    flex: 1;
-  }
-
   ul {
+    flex: 1;
     display: flex;
     justify-content: start;
     align-items: center;
@@ -64,12 +64,18 @@ const pages = [...posts, ...projects].sort((a, b) =>
 
     li a {
       text-decoration: none;
-      color: black;
+      color: var(--text-color-1);
 
       &:hover {
-        color: var(--accent);
+        color: var(--link-color);
       }
     }
+  }
+
+  .theme-toggle-container {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
   }
 
   .search-bar-container {

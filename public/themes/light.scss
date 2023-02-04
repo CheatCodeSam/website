@@ -1,0 +1,18 @@
+@mixin theme-variables {
+  --accent-rgb: 0, 100, 200;
+  --accent: rgb(var(--accent-rgb));
+  --bg-1-rgb: 246, 246, 246;
+  --bg-1: rgb(var(--bg-1-rgb));
+  --bg-2-rgb: 255, 255, 255;
+  --bg-2: rgb(var(--bg-2-rgb));
+  --text-color-1-rgb: 10, 10, 10;
+  --text-color-1: rgb(var(--text-color-1-rgb));
+  --text-color-2-rgb: 50, 50, 50;
+  --text-color-2: rgb(var(--text-color-2-rgb));
+  --link-color-rgb: 10, 100, 225;
+  --link-color: rgb(var(--link-color-rgb));
+}
+
+:root {
+  @include theme-variables;
+}

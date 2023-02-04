@@ -163,7 +163,7 @@
     height: $searchBarInputHeight;
     position: relative;
     border-radius: 0.5rem;
-    background-color: white;
+    background-color: var(--bg-2);
 
     input {
       position: absolute;
@@ -176,6 +176,7 @@
       background-color: transparent;
       font-size: 1.2em;
       font-family: monospace;
+      color: var(--text-color-1);
       z-index: 1;
     }
   }
@@ -186,7 +187,7 @@
     left: 0;
     width: 100%;
     padding-top: $searchBarInputHeight;
-    background-color: white;
+    background-color: var(--bg-2);
     z-index: 0;
     border-radius: 0.5rem;
     overflow: hidden;
@@ -211,7 +212,7 @@
 
         &:hover,
         &.selected {
-          background-color: #00000022;
+          background-color: var(--bg-1);
         }
 
         a {
@@ -223,7 +224,7 @@
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;
-          color: black;
+          color: var(--text-color-1);
           text-decoration: none;
         }
       }
