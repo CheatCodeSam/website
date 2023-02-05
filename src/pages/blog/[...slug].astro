@@ -1,4 +1,5 @@
 ---
+import { Image } from '@astrojs/image/components';
 import { getCollection } from 'astro:content';
 import Tag from '../../components/Tag.astro';
 import TimeLabel from '../../components/TimeLabel.svelte';
@@ -49,12 +50,14 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
       {
         thumbnail && (
-          <img
+          <Image
             class="thumbnail"
             src={thumbnail.src}
             alt={thumbnail.alt}
             width={thumbnail.width}
             height={thumbnail.height}
+            aspectRatio={`${thumbnail.width}:${thumbnail.height}`}
+            format={thumbnail.format}
           />
         )
       }
@@ -123,6 +126,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
     .thumbnail {
       width: 100%;
+      height: auto;
       border-radius: 1.2rem;
     }
   }
