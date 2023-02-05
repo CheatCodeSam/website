@@ -172,8 +172,6 @@
 </div>
 
 <style lang="scss">
-  $searchBarInputHeight: 2.5rem;
-
   button {
     display: flex;
     justify-content: center;
@@ -195,8 +193,9 @@
   }
 
   .search-bar {
+    --search-bar-input-height: 2.5rem;
     width: 100%;
-    height: $searchBarInputHeight;
+    height: 2.5rem;
     position: relative;
     background-color: var(--bg-1);
     outline: 2px solid var(--bg-2);
@@ -206,7 +205,7 @@
 
     button {
       position: absolute;
-      top: 0.25rem;
+      top: calc(var(--search-bar-input-height) / 4);
       right: 1.5rem;
       z-index: 2;
     }
@@ -218,7 +217,7 @@
     input {
       position: absolute;
       width: 100%;
-      height: $searchBarInputHeight;
+      height: var(--search-bar-input-height);
       padding: 0 1.5rem;
       box-sizing: border-box;
       outline: none;
@@ -238,7 +237,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    padding-top: $searchBarInputHeight;
+    padding-top: var(--search-bar-input-height);
     background-color: var(--bg-1);
     z-index: 0;
     outline: 2px solid var(--bg-2);
@@ -290,11 +289,13 @@
 
   @media only screen and (max-width: 640px) {
     .search-bar {
+      --search-bar-input-height: 4rem;
+      width: 100vw;
+      height: 4rem;
       display: none;
       position: fixed;
       top: 0;
       left: 0;
-      width: 100vw;
       border-radius: 0;
     }
 
@@ -309,7 +310,7 @@
     }
 
     .search-bar .search-box ul {
-      max-height: calc(100vh - $searchBarInputHeight);
+      max-height: calc(100vh - var(--search-bar-input-height));
     }
   }
 </style>
