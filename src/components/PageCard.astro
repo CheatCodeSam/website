@@ -1,13 +1,13 @@
 ---
 import { Image } from '@astrojs/image/components';
 import type { CollectionEntry } from 'astro:content';
-import { getDescriptionFromText } from '../utils';
+import { getDescriptionFromText, slugToRoute } from '../utils';
 import Tag from './Tag.astro';
 import TimeLabel from './TimeLabel.svelte';
 
 const page: CollectionEntry<'blog'> | CollectionEntry<'projects'> = Astro.props.page;
 const description = page.data.description ?? getDescriptionFromText(page.body, 160);
-const pageUrl = page.data.url || `/${page.collection}/${page.slug}`;
+const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 ---
 
 <li class="card">
@@ -46,7 +46,6 @@ const pageUrl = page.data.url || `/${page.collection}/${page.slug}`;
             width={page.data.thumbnail.width}
             height={page.data.thumbnail.height}
             format={page.data.thumbnail.format}
-            aspectRatio={page.data.thumbnail.aspectRatio}
           />
         </a>
       )

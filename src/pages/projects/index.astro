@@ -3,7 +3,7 @@ import { CollectionEntry, getCollection } from 'astro:content';
 import PageCard from '../../components/PageCard.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
 
-const projects = (await getCollection('projects')).sort((a, b) => +b.data.createdAt - +a.data.createdAt);
+const projects = (await getCollection<'projects'>('projects')).sort((a, b) => +b.data.createdAt - +a.data.createdAt);
 const projectsByYear = new Map<number, CollectionEntry<'projects'>[]>();
 
 for (const project of projects) {

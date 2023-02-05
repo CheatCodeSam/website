@@ -1,18 +1,18 @@
 ---
 import { getCollection } from 'astro:content';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import { getDescriptionFromText, localOrRemoteSrcToUrl } from '../../utils';
+import { getDescriptionFromText, localOrRemoteSrcToUrl, slugToRoute } from '../../utils';
 
 const { slug } = Astro.params;
-const projects = await getCollection('projects');
+const projects = await getCollection<'projects'>('projects');
 const project = projects.find((project) => project.data.id === +slug!.split('/')[0]);
 
 if (!project) {
   return Astro.redirect('/404');
 }
 
-if (project.slug !== slug) {
-  return Astro.redirect(`/projects/${project.slug}`);
+if (project.slug.slice(project.slug.indexOf('-') + 1) !== slug?.split('/')[1]) {
+  return Astro.redirect(slugToRoute(project?.slug, 'projects'));
 }
 
 const { Content } = await project.render();

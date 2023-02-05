@@ -1,3 +1,15 @@
+export function slugToRoute(slug: string, collection: 'blog' | 'projects') {
+  if (collection === 'blog') {
+    const idAndTitle = slug.split('/')[1].replace(/\..*/g, '');
+    const [id, titleUrl] = idAndTitle.split(/-(.*)/s); // e.g. "01-hello-world" becomes ["01", "hello-world"]
+    return `/blog/${id}/${titleUrl}`;
+  } else if (collection === 'projects') {
+    const idAndTitle = slug.replace(/\..*/g, '');
+    const [id, titleUrl] = idAndTitle.split(/-(.*)/s); // e.g. "01-hello-world" becomes ["01", "hello-world"]
+    return `/projects/${id}/${titleUrl}`;
+  }
+}
+
 export function getDescriptionFromText(text: string, maxLength: number): string {
   // Return the raw text content of the page if its lenght doesn't exceed the description's max length.
   if (text.length <= maxLength) {

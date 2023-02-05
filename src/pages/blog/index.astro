@@ -4,11 +4,11 @@ import PageCard from '../../components/PageCard.astro';
 import Tag from '../../components/Tag.astro';
 import BasePageLayout from '../../layouts/BasePageLayout.astro';
 
-const posts = (await getCollection('blog')).sort((a, b) => b.data.id - a.data.id);
+const posts = (await getCollection<'blog'>('blog')).sort((a, b) => b.data.id - a.data.id);
 const postsByYear = new Map<number, CollectionEntry<'blog'>[]>();
 
 for (const post of posts) {
-  const year = new Date(post.data.createdAt).getFullYear();
+  const year = post.data.createdAt?.getFullYear();
 
   if (!postsByYear.has(year)) {
     postsByYear.set(year, []);

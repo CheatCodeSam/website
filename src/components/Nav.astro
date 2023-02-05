@@ -3,8 +3,8 @@ import { getCollection } from 'astro:content';
 import SearchBar from './SearchBar.svelte';
 import ThemeToggle from './ThemeToggle.svelte';
 
-const posts = await getCollection('blog');
-const projects = await getCollection('projects');
+const posts = await getCollection<'blog'>('blog');
+const projects = await getCollection<'projects'>('projects');
 const pages = [...posts, ...projects].sort((a, b) =>
   a.collection === 'blog' && b.collection === 'blog' ? b.data.id - a.data.id : +b.data.createdAt - +a.data.createdAt
 );
