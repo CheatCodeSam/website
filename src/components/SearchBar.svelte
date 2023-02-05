@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CollectionEntry } from 'astro:content';
   import { createEventDispatcher } from 'svelte';
+  import { slugToRoute } from '../utils';
   import TimeLabel from './TimeLabel.svelte';
 
   type Item = CollectionEntry<'blog'> | CollectionEntry<'projects'>;
@@ -29,7 +30,7 @@
     dispatch('search', filteredItems);
   }
 
-  const getItemUrl = (item: Item) => item.data.url || `/${item.collection}/${item.slug}`;
+  const getItemUrl = (item: Item) => item.data.url || slugToRoute(item.slug, item.collection);
 
   function isValid(item: Item, searchTerm: string): boolean {
     let slice = item.data.title?.toLowerCase();
