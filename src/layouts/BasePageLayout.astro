@@ -29,7 +29,6 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
 
     <!-- Init theme  -->
     <script is:inline>
-      const initialTheme = JSON.parse(localStorage.getItem('theme') ?? 'auto');
       updateTheme(JSON.parse(localStorage.getItem('theme') ?? 'auto'));
 
       function updateTheme(theme) {
