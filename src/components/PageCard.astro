@@ -13,7 +13,7 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 <li class="card">
   <TimeLabel className="time-label" date={new Date(page.data.createdAt)} monthFormat={'short'} dayFormat={'2-digit'} />
 
-  <div>
+  <div class="card-content-and-thumbnail">
     <div class="card-content">
       <!-- This link is enlarged to fit the whole card using an absolutely positioned pseudo element. -->
       <a class="card-link" href={pageUrl} aria-label={`Read blog post titled: "${page.data.title}`}></a>
@@ -67,7 +67,7 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 
   ul.tags {
     display: flex;
-    padding: 0 1rem;
+    padding: 0;
     margin: 0.25rem 0;
     gap: 2ch;
     flex-wrap: wrap;
@@ -102,37 +102,33 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     min-width: $timeLabelWidth;
   }
 
-  .card > div {
+  .card-content-and-thumbnail {
     flex: 1;
     display: flex;
     gap: 1rem;
     width: calc(100% - $timeLabelWidth - $gap); // The full width minus the width of the time label
     box-sizing: border-box;
+    background-color: var(--bg-2);
+    border-radius: $borderRadius;
+    transition: box-shadow 200ms;
+    padding: 1rem;
+
+    &:hover {
+      box-shadow: 0 0 1rem rgb(var(--accent-1-rgb), 0.25);
+    }
   }
 
   .card-content {
     position: relative;
     flex: 1;
-    padding: 1rem 0;
     text-decoration: none;
-    border-radius: $borderRadius;
-    background-color: var(--bg-2);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     transition: box-shadow 200ms;
 
-    &:hover {
-      box-shadow: 0 0 1rem rgb(var(--accent-1-rgb), 0.25);
-
-      h2.title {
-        color: var(--accent-1);
-      }
-    }
-
     h2.title,
     p.description {
-      padding: 0 1rem;
       margin: 0;
       box-sizing: border-box;
     }
@@ -144,7 +140,7 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     z-index: 1;
   }
 
-  .thumbnail {
+  a.thumbnail {
     max-width: calc(50% - $gap / 2); // Half of the parent's size
     height: 100%;
     display: flex;
@@ -152,17 +148,12 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     align-items: center;
     overflow: hidden;
     border-radius: $borderRadius;
-    transition: box-shadow 200ms;
-
-    &:hover {
-      box-shadow: 0 0 1rem rgb(var(--accent-1-rgb), 0.25);
-    }
 
     img {
       width: auto;
       height: 100%;
+      min-height: 100%;
       max-height: 16rem;
-      border-radius: $borderRadius;
       margin: 0;
       padding: 0;
     }
@@ -185,9 +176,15 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
       flex-direction: column;
     }
 
-    .thumbnail {
+    a.thumbnail {
       max-width: 100%;
       height: auto;
+
+      img {
+        width: 100%;
+        min-height: 0;
+        max-height: none;
+      }
     }
   }
 </style>
