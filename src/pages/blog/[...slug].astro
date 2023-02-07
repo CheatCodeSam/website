@@ -7,7 +7,9 @@ import BasePageLayout from '../../layouts/BasePageLayout.astro';
 import { getDescriptionFromText, localOrRemoteSrcToUrl, slugToRoute } from '../../utils';
 
 const { slug } = Astro.params;
-const post = (await getCollection<'blog'>('blog', ({ data }) => data.id === +slug!.split('/')[0]))[0];
+const posts = await getCollection<'blog'>('blog');
+const postIndex = posts.findIndex(({ data }) => data.id === +slug!.split('/')[0]);
+const [prevPost, post, nextPost] = [posts[postIndex - 1], posts[postIndex], posts[postIndex + 1]];
 
 if (!post) {
   return Astro.redirect('/blog/404?redirectedFrom=' + slug);
@@ -99,6 +101,26 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
       <Content />
     </main>
   </article>
+
+  <div class="prev-and-next-posts">
+    {
+      prevPost && (
+        <a class="prev-post" href={slugToRoute(prevPost.slug, 'blog')}>
+          <span>← Previous post</span>
+          {prevPost.data.title}
+        </a>
+      )
+    }
+
+    {
+      nextPost && (
+        <a class="next-post" href={slugToRoute(nextPost.slug, 'blog')}>
+          <span>Next post →</span>
+          {nextPost.data.title}
+        </a>
+      )
+    }
+  </div>
 </BasePageLayout>
 
 <style lang="scss" is:global>
@@ -228,6 +250,37 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
       color: var(--text-color-2);
       padding: 0;
       margin: 0.5rem 0;
+    }
+  }
+
+  .prev-and-next-posts {
+    max-width: $articleWidth;
+    width: 100%;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    box-sizing: border-box;
+    margin: auto;
+    display: flex;
+    gap: 1.5rem;
+
+    a {
+      flex: 1;
+      display: block;
+      padding: 1rem;
+      border-radius: 0.6rem;
+      background-color: rgba(var(--bg-2-rgb), 1);
+      color: var(--text-color-2);
+      text-decoration: none;
+
+      &:hover span {
+        color: var(--accent-1);
+      }
+
+      span {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+        transition: color 200ms;
+      }
     }
   }
 
