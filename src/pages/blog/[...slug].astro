@@ -7,8 +7,7 @@ import BasePageLayout from '../../layouts/BasePageLayout.astro';
 import { getDescriptionFromText, localOrRemoteSrcToUrl, slugToRoute } from '../../utils';
 
 const { slug } = Astro.params;
-const posts = await getCollection<'blog'>('blog');
-const post = posts.find((post) => post.data.id === +slug!.split('/')[0]);
+const post = (await getCollection<'blog'>('blog', ({ data }) => data.id === +slug!.split('/')[0]))[0];
 
 if (!post) {
   return Astro.redirect('/404');
@@ -18,7 +17,7 @@ if (post.slug.split('/')[1].slice(post.slug.split('/')[1].indexOf('-') + 1) !== 
   return Astro.redirect(slugToRoute(post?.slug, 'blog'));
 }
 
-const { Content } = await post.render();
+const { Content, headings } = await post.render();
 const { title, description, tags, thumbnail, createdAt } = post.data;
 const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
@@ -30,6 +29,21 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
   metaKeywords={tags}
   metaImageSrc={imgSrc}
 >
+  {
+    headings.length > 0 && (
+      <div class="toc">
+        <span class="toc-title">Table of contents</span>
+        <ul>
+          {headings.map((heading) => (
+            <li class={`toc-depth-${heading.depth}`}>
+              <a href={`${slugToRoute(post?.slug, 'blog')}#${heading.slug}`}>{heading.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
   <article class="blog-post">
     <header>
       <h1 class="title">{title}</h1>
@@ -78,8 +92,65 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 </BasePageLayout>
 
 <style lang="scss" is:global>
+  $articleWidth: 50rem;
+  $tocItemLeftPadding: 0.5rem;
+
+  .toc {
+    position: fixed;
+    left: calc((100vw - (100vw - $articleWidth) / 2 - $tocItemLeftPadding));
+    top: 6rem;
+    right: 1.5rem;
+    max-width: 25rem;
+
+    .toc-title {
+      display: block;
+      margin-bottom: 0.5rem;
+      padding-left: $tocItemLeftPadding;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: var(--text-color-2);
+    }
+
+    ul {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      a {
+        text-decoration: none;
+        color: var(--text-color-2);
+        opacity: 0.6;
+        background-color: transparent;
+        display: block;
+        border-radius: 0.4rem;
+        padding: 0.2rem $tocItemLeftPadding;
+        transition: 100ms;
+
+        &:hover {
+          opacity: 1;
+          background-color: rgba(var(--text-color-2-rgb), 0.1);
+        }
+      }
+
+      .toc-depth-1 {
+        font-weight: bold;
+      }
+
+      .toc-depth-3 {
+        padding-left: 1.5rem;
+      }
+
+      .toc-depth-4 {
+        padding-left: 3rem;
+      }
+    }
+  }
+
   article.blog-post {
-    max-width: 50rem;
+    max-width: $articleWidth;
     width: 100%;
     padding: 0 1.5rem 1.5rem 1.5rem;
     box-sizing: border-box;
@@ -128,6 +199,12 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
       width: 100%;
       height: auto;
       border-radius: 1.2rem;
+    }
+  }
+
+  @media only screen and (max-width: 1300px) {
+    .toc {
+      display: none;
     }
   }
 </style>
