@@ -17,7 +17,7 @@ if (post.slug.split('/')[1].slice(post.slug.split('/')[1].indexOf('-') + 1) !== 
   return Astro.redirect(slugToRoute(post?.slug, 'blog'));
 }
 
-const { Content, headings } = await post.render();
+const { Content, headings, remarkPluginFrontmatter } = await post.render();
 const { title, description, tags, thumbnail, createdAt } = post.data;
 const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
@@ -46,6 +46,24 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
   <article class="blog-post">
     <header>
+      <div class="date-and-reading-time">
+        <TimeLabel
+          className="created-date"
+          date={createdAt}
+          yearFormat={'numeric'}
+          monthFormat={'long'}
+          dayFormat={'numeric'}
+        />
+
+        <span class="reading-time"
+          >{
+            remarkPluginFrontmatter.minutesRead >= 1
+              ? Math.ceil(remarkPluginFrontmatter.minutesRead) + ' minute read'
+              : Math.round(remarkPluginFrontmatter.minutesRead * 60) + ' second read'
+          }</span
+        >
+      </div>
+
       <h1 class="title">{title}</h1>
 
       {description && <p class="description">{description}</p>}
@@ -75,14 +93,6 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
           />
         )
       }
-
-      <TimeLabel
-        date={createdAt}
-        prefix="Published "
-        yearFormat={'numeric'}
-        monthFormat={'long'}
-        dayFormat={'numeric'}
-      />
     </header>
 
     <main class="post-content">
@@ -156,16 +166,39 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
     box-sizing: border-box;
     margin: auto;
 
+    .date-and-reading-time {
+      padding-top: 2rem;
+      padding-bottom: 0.5rem;
+      display: flex;
+      gap: 1.5rem;
+      color: var(--text-color-2);
+
+      .created-date,
+      .reading-time {
+        font-family: 'Fira Code';
+        font-size: 1em;
+      }
+    }
+
     :last-child {
       margin-bottom: 0;
     }
 
     h1.title {
+      margin: 0 0 0.5rem 0;
       font-size: 2em;
       width: fit-content;
       background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+    }
+
+    .thumbnail {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 1rem 0;
+      border-radius: 1.2rem;
     }
 
     h2 {
@@ -179,7 +212,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
     ul.tags {
       display: flex;
       padding: 0;
-      margin: 1rem 0;
+      margin: 0.5rem 0;
       gap: 2ch;
       flex-wrap: wrap;
 
@@ -193,12 +226,8 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
     p.description {
       font-size: 1.1em;
       color: var(--text-color-2);
-    }
-
-    .thumbnail {
-      width: 100%;
-      height: auto;
-      border-radius: 1.2rem;
+      padding: 0;
+      margin: 0.5rem 0;
     }
   }
 

@@ -5,6 +5,7 @@ import image from '@astrojs/image';
 import svelte from '@astrojs/svelte';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import { remarkReadingTime } from './remark-plugins/remark-reading-time.mjs';
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
       theme: 'github-dark',
       wrap: true,
     },
-    remarkPlugins: [remarkMath],
+    remarkPlugins: [remarkMath, remarkReadingTime],
     rehypePlugins: [rehypeKatex],
   },
 });
