@@ -10,7 +10,7 @@ const { slug } = Astro.params;
 const post = (await getCollection<'blog'>('blog', ({ data }) => data.id === +slug!.split('/')[0]))[0];
 
 if (!post) {
-  return Astro.redirect('/404');
+  return Astro.redirect('/blog/404?redirectedFrom=' + slug);
 }
 
 if (post.slug.split('/')[1].slice(post.slug.split('/')[1].indexOf('-') + 1) !== slug?.split('/')[1]) {
