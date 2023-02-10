@@ -28,7 +28,7 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
           <ul class="tags">
             {page.data.tags.map((tag) => (
               <li class="tags-item">
-                <Tag name={tag} type="blog" />
+                <Tag name={tag} type={page.collection} />
               </li>
             ))}
           </ul>
