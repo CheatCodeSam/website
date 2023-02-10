@@ -4,9 +4,7 @@ export function slugToRoute(slug: string, collection: 'blog' | 'projects') {
     const [id, titleUrl] = idAndTitle.split(/-(.*)/s); // e.g. "01-hello-world" becomes ["01", "hello-world"]
     return `/blog/${id}/${titleUrl}`;
   } else if (collection === 'projects') {
-    const idAndTitle = slug.replace(/\..*/g, '');
-    const [id, titleUrl] = idAndTitle.split(/-(.*)/s); // e.g. "01-hello-world" becomes ["01", "hello-world"]
-    return `/projects/${id}/${titleUrl}`;
+    return '/projects/' + slug;
   }
 }
 

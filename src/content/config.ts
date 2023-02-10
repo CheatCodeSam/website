@@ -8,6 +8,7 @@ const blog = defineCollection({
     description: z.string().optional(),
     tags: z.array(z.string()).optional(),
     createdAt: z.string().or(z.date()).transform(str => new Date(str)),
+    updatedAt: z.string().or(z.date()).transform(str => new Date(str)).optional(),
     thumbnail: z.object({
       src: z.string(),
       alt: z.string(),
@@ -20,12 +21,12 @@ const blog = defineCollection({
 
 const projects = defineCollection({
   schema: z.object({
-    id: z.number(),
     url: z.string().url().optional(),
     title: z.string(),
     description: z.string().optional(),
     tags: z.array(z.string()).optional(),
     createdAt: z.string().or(z.date()).transform(str => new Date(str)),
+    updatedAt: z.string().or(z.date()).transform(str => new Date(str)).optional(),
     thumbnail: z.object({
       src: z.string(),
       alt: z.string(),
