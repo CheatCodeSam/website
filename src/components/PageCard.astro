@@ -201,6 +201,11 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     :global(img) {
       display: none;
     }
+
+    :global(a) {
+      z-index: 1;
+      position: relative;
+    }
   }
 
   @media only screen and (max-width: 640px) {
