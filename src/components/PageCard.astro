@@ -172,7 +172,9 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
   }
 
   div.description {
-    :global(*) {
+    :global(*),
+    :global(.katex),
+    :global(.katex > .katex-html) {
       display: inline;
       font-size: 1em;
       list-style: none;
