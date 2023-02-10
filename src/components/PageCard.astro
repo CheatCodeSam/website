@@ -2,6 +2,7 @@
 import { Image } from '@astrojs/image/components';
 import type { CollectionEntry } from 'astro:content';
 import { getDescriptionFromText, slugToRoute } from '../utils';
+import Markdown from './Markdown.svelte';
 import Tag from './Tag.astro';
 import TimeLabel from './TimeLabel.svelte';
 
@@ -34,7 +35,9 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
         )
       }
 
-      <p class="description"><a href={pageUrl}>{description}</a></p>
+      <div class="description">
+        <Markdown markdown={description} />
+      </div>
     </div>
 
     {
@@ -128,15 +131,14 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     transition: box-shadow 200ms;
 
     h2.title,
-    p.description {
+    div.description {
       margin: 0;
       box-sizing: border-box;
     }
   }
 
   h2.title,
-  li.tags-item,
-  p.description {
+  li.tags-item {
     z-index: 1;
   }
 
@@ -165,10 +167,38 @@ const pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     transition: color 200ms;
   }
 
-  p.description {
-    margin-top: 0.5rem;
+  div.description :global(:last-child) {
     margin-bottom: 0;
-    color: #444;
+  }
+
+  div.description {
+    :global(*) {
+      display: inline;
+      font-size: 1em;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    :global(h1)::before {
+      content: '# ';
+    }
+
+    :global(h2)::before {
+      content: '## ';
+    }
+
+    :global(h3)::before {
+      content: '### ';
+    }
+
+    :global(li)::before {
+      content: '- ';
+    }
+
+    :global(img) {
+      display: none;
+    }
   }
 
   @media only screen and (max-width: 640px) {
