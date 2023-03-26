@@ -14,12 +14,16 @@ const projects = (await getCollection<'projects'>('projects')).sort((a, b) => +b
 >
   <header>
     <div class="header-content">
-      <h1>Welcome to my website!</h1>
+      <h1>Joona Aalto</h1>
       <p>
-        This is my personal website where I showcase my projects and write about whatever interests me from science,
-        math and programming, to game development, music and art.
+        Hello! I'm a Finnish high school student who loves creating and learning new things. I'm interested in all kinds
+        of topics, such as science, programming, and game development, and I'm always eager to dive deeper into these
+        areas.
       </p>
-      <p>Feel free to check out my <a href="/projects">projects</a> and my <a href="/blog">blog</a>!</p>
+      <p>
+        On this website, you can see some of my <a href="/projects">projects</a>, as well as my <a href="/blog">blog</a>
+        where I write about whatever I'm interested in or working on.
+      </p>
     </div>
   </header>
 
@@ -36,31 +40,6 @@ const projects = (await getCollection<'projects'>('projects')).sort((a, b) => +b
       <ul>
         {projects.slice(0, 3).map((project) => <PageCard page={project} />)}
       </ul>
-    </section>
-
-    <section>
-      <h2>About</h2>
-
-      <p>
-        I'm a high school student who is interested in various different things such as science, technology, web
-        development, art, games and game development. I aim to build up my skills and knowledge in all of these areas,
-        and this website is where I intend to show my work and progress.
-      </p>
-
-      <h3>Website</h3>
-
-      <p>
-        This website is made with <a href="https://astro.build/">Astro</a>, as it seems like the perfect fit for my
-        needs. It's incredibly fast and lightweight, and its content-focused approach is great for my blog. It also has
-        built-in support for using practically any UI frameworks, which makes it possible for me to add old projects
-        that I've made with different web technologies.
-      </p>
-
-      <p>
-        For scripts I use TypeScript, for styles I use SCSS, and for the blog I use Markdown/<a
-          href="https://mdxjs.com/">MDX</a
-        > with Astro's <a href="https://docs.astro.build/en/guides/content-collections/">content collections</a>.
-      </p>
     </section>
   </main>
 </BasePageLayout>
