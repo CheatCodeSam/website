@@ -13,6 +13,11 @@ const pages = [...posts, ...projects].sort((a, b) =>
 <nav>
   <ul>
     <li>
+      <a href="/">
+        <img class="logo" src="/icons/icon_transparent.png" alt="My logo" />
+      </a>
+    </li>
+    <li>
       <a href="/">Home</a>
     </li>
     <li>
@@ -63,11 +68,19 @@ const pages = [...posts, ...projects].sort((a, b) =>
     padding: 0;
 
     li a {
+      display: flex;
+      align-items: center;
       text-decoration: none;
       color: var(--text-color-1);
 
       &:hover {
         color: var(--link-color);
+      }
+
+      img.logo {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
       }
     }
   }
@@ -84,5 +97,11 @@ const pages = [...posts, ...projects].sort((a, b) =>
     box-sizing: border-box;
     display: flex;
     justify-content: flex-end;
+  }
+
+  :global(.light) {
+    img.logo {
+      filter: brightness(0.9);
+    }
   }
 </style>
