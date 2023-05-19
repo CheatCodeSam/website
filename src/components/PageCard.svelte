@@ -57,6 +57,8 @@
                       ? link.img.darkThemeSrc
                       : link.img.src}
                     alt={link.img.alt}
+                    width="32"
+                    height="32"
                   />
                 {/if}
               </a>
