@@ -14,4 +14,12 @@ thumbnail:
   width: 480
   height: 270
   format: "png"
+links:
+  -
+    url: "https://github.com/Jondolf/Algorust"
+    text: "GitHub"
+    img:
+      src: "/assets/github-mark.png"
+      darkThemeSrc: "/assets/github-mark-white.png"
+      alt: "GitHub logo"
 ---
