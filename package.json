@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@astrojs/image": "^0.14.0",
+    "@astrojs/netlify": "^2.2.3",
     "@astrojs/svelte": "^2.0.1",
     "@nanostores/persistent": "^0.7.0",
-    "astro": "^2.0.6",
+    "astro": "^2.5.0",
+    "astro-compress": "^1.1.43",
     "mdast-util-to-string": "^3.1.1",
     "nanostores": "^0.7.3",
     "reading-time": "^1.5.0",

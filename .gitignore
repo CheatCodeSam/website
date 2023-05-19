@@ -22,4 +22,5 @@ pnpm-debug.log*
 
 # other
 .vscode
+.netlify
 src/content/types.generated.d.ts
