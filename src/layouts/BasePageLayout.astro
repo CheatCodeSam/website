@@ -1,5 +1,5 @@
 ---
-import Nav from '../components/Nav.astro';
+import Nav from "../components/Nav.astro";
 
 export interface Props {
   title: string;
@@ -20,9 +20,23 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Icons and manifest  -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/icons/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/icons/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/icons/favicon-16x16.png"
+    />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#1e1e23" />
 
@@ -36,64 +50,83 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
 
     <title>{title}</title>
     <meta name="description" content={metaDescription} />
-    {metaKeywords && <meta name="keywords" content={metaKeywords?.join(', ')} />}
+    {
+      metaKeywords && (
+        <meta name="keywords" content={metaKeywords?.join(", ")} />
+      )
+    }
     <meta name="og:title" property="og:title" content={title} />
-    <meta name="og:description" property="og:description" content={metaDescription} />
-    {metaImageSrc && <meta name="og:image" property="og:image" content={metaImageSrc} />}
+    <meta
+      name="og:description"
+      property="og:description"
+      content={metaDescription}
+    />
+    {
+      metaImageSrc && (
+        <meta name="og:image" property="og:image" content={metaImageSrc} />
+      )
+    }
 
     <!-- Init theme  -->
     <script is:inline>
-      updateTheme(JSON.parse(localStorage.getItem('theme') ?? 'auto'));
+      updateTheme(JSON.parse(localStorage.getItem("theme") ?? "auto"));
 
       function updateTheme(theme) {
-        if (theme === 'dark') {
-          document.documentElement.classList.remove('light');
-          document.documentElement.classList.add('dark');
-        } else if (theme === 'light') {
-          document.documentElement.classList.remove('dark');
-          document.documentElement.classList.add('light');
-        } else if (theme === 'auto') {
-          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.remove('light');
-            document.documentElement.classList.add('dark');
+        if (theme === "dark") {
+          document.documentElement.classList.remove("light");
+          document.documentElement.classList.add("dark");
+        } else if (theme === "light") {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.add("light");
+        } else if (theme === "auto") {
+          if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          ) {
+            document.documentElement.classList.remove("light");
+            document.documentElement.classList.add("dark");
           } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove("dark");
+            document.documentElement.classList.add("light");
           }
         }
       }
     </script>
     <!-- Update theme when prefers-color-scheme changes -->
     <script>
-      const theme = JSON.parse(localStorage.getItem('theme') ?? '"auto"');
+      const theme = JSON.parse(localStorage.getItem("theme") ?? '"auto"');
       // @ts-ignore
       updateTheme(theme);
 
       // Change theme when the theme store's value changes.
-      const { theme: themeStore } = await import('../stores');
+      const { theme: themeStore } = await import("../stores");
       themeStore.set(theme);
 
       // Update theme when user's preferred color scheme changes (stored theme still overrides this).
-      const prefersLight = window.matchMedia('(prefers-color-scheme: light)');
-      prefersLight.addEventListener('change', (e) => {
-        if (e.matches && JSON.parse(localStorage.getItem('theme') ?? '"auto"') === 'auto') {
+      const prefersLight = window.matchMedia("(prefers-color-scheme: light)");
+      prefersLight.addEventListener("change", (e) => {
+        if (
+          e.matches &&
+          JSON.parse(localStorage.getItem("theme") ?? '"auto"') === "auto"
+        ) {
           // @ts-ignore
-          themeStore.set(updateTheme('auto'));
+          themeStore.set(updateTheme("auto"));
         }
       });
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-      prefersDark.addEventListener('change', (e) => {
-        if (e.matches && JSON.parse(localStorage.getItem('theme') ?? '"auto"') === 'auto') {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+      prefersDark.addEventListener("change", (e) => {
+        if (
+          e.matches &&
+          JSON.parse(localStorage.getItem("theme") ?? '"auto"') === "auto"
+        ) {
           // @ts-ignore
-          themeStore.set(updateTheme('auto'));
+          themeStore.set(updateTheme("auto"));
         }
       });
 
       // @ts-ignore
       themeStore.subscribe((theme) => theme && updateTheme(theme));
     </script>
-    <link rel="stylesheet" href="/themes/dark.scss" media="(prefers-color-scheme: dark)" />
-    <link rel="stylesheet" href="/themes/light.scss" media="(prefers-color-scheme: light)" />
   </head>
 
   <body class="dark">
@@ -102,22 +135,24 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <slot />
 
     <style lang="scss" is:global>
-      @use '../../public/themes/light.scss';
-      @use '../../public/themes/dark.scss';
+      @use "../../public/themes/light.scss";
+      @use "../../public/themes/dark.scss";
 
       /* For browsers that support variable fonts */
       @supports (font-variation-settings: normal) {
         @font-face {
-          font-family: 'Fira Code';
-          src: url('/fonts/Fira_Code/FiraCode-VariableFont_wght.ttf') format('truetype-variations');
+          font-family: "Fira Code";
+          src: url("/fonts/Fira_Code/FiraCode-VariableFont_wght.ttf")
+            format("truetype-variations");
           font-weight: 300 700;
           font-stretch: normal;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Inter';
-          src: url('/fonts/Inter/Inter-VariableFont_slnt,wght.ttf') format('truetype-variations');
+          font-family: "Inter";
+          src: url("/fonts/Inter/Inter-VariableFont_slnt,wght.ttf")
+            format("truetype-variations");
           font-weight: 100 900;
           font-display: swap;
         }
@@ -126,43 +161,47 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       /* For browsers that don't support variable fonts */
       @supports not (font-variation-settings: normal) {
         @font-face {
-          font-family: 'Inter';
-          src: url('/fonts/Inter/static/Inter-ExtraLight.ttf') format('truetype');
+          font-family: "Inter";
+          src: url("/fonts/Inter/static/Inter-ExtraLight.ttf")
+            format("truetype");
           font-weight: 200;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Inter';
-          src: url('/fonts/Inter/static/Inter-Regular.ttf') format('truetype');
+          font-family: "Inter";
+          src: url("/fonts/Inter/static/Inter-Regular.ttf") format("truetype");
           font-weight: 400;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Inter';
-          src: url('/fonts/Inter/static/Inter-Bold.ttf') format('truetype');
+          font-family: "Inter";
+          src: url("/fonts/Inter/static/Inter-Bold.ttf") format("truetype");
           font-weight: 700;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Fira Code';
-          src: url('/fonts/Fira_Code/static/FiraCode-Light.ttf') format('truetype');
+          font-family: "Fira Code";
+          src: url("/fonts/Fira_Code/static/FiraCode-Light.ttf")
+            format("truetype");
           font-weight: 300;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Fira Code';
-          src: url('/fonts/Fira_Code/static/FiraCode-Regular.ttf') format('truetype');
+          font-family: "Fira Code";
+          src: url("/fonts/Fira_Code/static/FiraCode-Regular.ttf")
+            format("truetype");
           font-weight: 400;
           font-display: swap;
         }
 
         @font-face {
-          font-family: 'Fira Code';
-          src: url('/fonts/Fira_Code/static/FiraCode-Bold.ttf') format('truetype');
+          font-family: "Fira Code";
+          src: url("/fonts/Fira_Code/static/FiraCode-Bold.ttf")
+            format("truetype");
           font-weight: 700;
           font-display: swap;
         }
@@ -191,7 +230,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
         padding-top: 4rem;
         box-sizing: border-box;
         font-size: 1.05em;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
         font-weight: 400;
         background-color: var(--bg-1);
       }
@@ -206,7 +245,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       }
 
       code {
-        font-family: 'Fira Code', monospace;
+        font-family: "Fira Code", monospace;
         line-height: 1.5em;
       }
 
