@@ -1,10 +1,12 @@
 ---
-import { CollectionEntry, getCollection } from 'astro:content';
-import PageCard from '../../components/PageCard.astro';
-import BasePageLayout from '../../layouts/BasePageLayout.astro';
+import { CollectionEntry, getCollection } from "astro:content";
+import PageCard from "../../components/PageCard.svelte";
+import BasePageLayout from "../../layouts/BasePageLayout.astro";
 
-const projects = (await getCollection<'projects'>('projects')).sort((a, b) => +b.data.createdAt - +a.data.createdAt);
-const projectsByYear = new Map<number, CollectionEntry<'projects'>[]>();
+const projects = (await getCollection<"projects">("projects")).sort(
+  (a, b) => +b.data.createdAt - +a.data.createdAt
+);
+const projectsByYear = new Map<number, CollectionEntry<"projects">[]>();
 
 for (const project of projects) {
   const year = new Date(project.data.createdAt).getFullYear();
@@ -19,7 +21,7 @@ for (const project of projects) {
 <BasePageLayout
   title="Projects - Joona Aalto"
   metaDescription="Discover my games, apps and other projects."
-  metaKeywords={['Projects', 'Games', 'Apps', 'Science', 'Simulation']}
+  metaKeywords={["Projects", "Games", "Apps", "Science", "Simulation"]}
 >
   <header>
     <h1>Projects</h1>
@@ -33,7 +35,7 @@ for (const project of projects) {
           <h2>{year}</h2>
           <ul>
             {projects.map((project) => (
-              <PageCard page={project} />
+              <PageCard page={project} client:load />
             ))}
           </ul>
         </div>
@@ -55,7 +57,11 @@ for (const project of projects) {
   h1 {
     font-size: 2.5em;
     width: fit-content;
-    background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
+    background: -webkit-linear-gradient(
+      45deg,
+      var(--accent-1),
+      var(--accent-2)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }

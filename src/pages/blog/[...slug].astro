@@ -1,32 +1,47 @@
 ---
-import { Image } from '@astrojs/image/components';
-import { getCollection } from 'astro:content';
-import Tag from '../../components/Tag.astro';
-import TimeLabel from '../../components/TimeLabel.svelte';
-import BasePageLayout from '../../layouts/BasePageLayout.astro';
-import { getDescriptionFromText, localOrRemoteSrcToUrl, slugToRoute } from '../../utils';
+import { Image } from "@astrojs/image/components";
+import { getCollection } from "astro:content";
+import Tag from "../../components/Tag.svelte";
+import TimeLabel from "../../components/TimeLabel.svelte";
+import BasePageLayout from "../../layouts/BasePageLayout.astro";
+import {
+  getDescriptionFromText,
+  localOrRemoteSrcToUrl,
+  slugToRoute,
+} from "../../utils";
 
 const { slug } = Astro.params;
-const posts = await getCollection<'blog'>('blog');
-const postIndex = posts.findIndex(({ data }) => data.id === +slug!.split('/')[0]);
-const [prevPost, post, nextPost] = [posts[postIndex - 1], posts[postIndex], posts[postIndex + 1]];
+const posts = await getCollection<"blog">("blog");
+const postIndex = posts.findIndex(
+  ({ data }) => data.id === +slug!.split("/")[0]
+);
+const [prevPost, post, nextPost] = [
+  posts[postIndex - 1],
+  posts[postIndex],
+  posts[postIndex + 1],
+];
 
 if (!post) {
-  return Astro.redirect('/blog/404?redirectedFrom=' + slug);
+  return Astro.redirect("/blog/404?redirectedFrom=" + slug);
 }
 
-if (post.slug.split('/')[1].slice(post.slug.split('/')[1].indexOf('-') + 1) !== slug?.split('/')[1]) {
-  return Astro.redirect(slugToRoute(post?.slug, 'blog'));
+if (
+  post.slug.split("/")[1].slice(post.slug.split("/")[1].indexOf("-") + 1) !==
+  slug?.split("/")[1]
+) {
+  return Astro.redirect(slugToRoute(post?.slug, "blog"));
 }
 
 const { Content, headings, remarkPluginFrontmatter } = await post.render();
 const { title, description, tags, thumbnail, createdAt } = post.data;
 const currUrl = new URL(Astro.request.url);
-const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString() : undefined;
+const imgSrc = thumbnail?.src
+  ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString()
+  : undefined;
 ---
 
 <BasePageLayout
-  title={title + ' - Joona Aalto'}
+  title={title + " - Joona Aalto"}
   metaDescription={description ?? getDescriptionFromText(post.body, 160)}
   metaKeywords={tags}
   metaImageSrc={imgSrc}
@@ -38,7 +53,9 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
         <ul>
           {headings.map((heading) => (
             <li class={`toc-depth-${heading.depth}`}>
-              <a href={`${slugToRoute(post?.slug, 'blog')}#${heading.slug}`}>{heading.text}</a>
+              <a href={`${slugToRoute(post?.slug, "blog")}#${heading.slug}`}>
+                {heading.text}
+              </a>
             </li>
           ))}
         </ul>
@@ -52,16 +69,17 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
         <TimeLabel
           className="created-date"
           date={createdAt}
-          yearFormat={'numeric'}
-          monthFormat={'long'}
-          dayFormat={'numeric'}
+          yearFormat={"numeric"}
+          monthFormat={"long"}
+          dayFormat={"numeric"}
         />
 
         <span class="reading-time"
           >{
             remarkPluginFrontmatter.minutesRead >= 1
-              ? Math.ceil(remarkPluginFrontmatter.minutesRead) + ' minute read'
-              : Math.round(remarkPluginFrontmatter.minutesRead * 60) + ' second read'
+              ? Math.ceil(remarkPluginFrontmatter.minutesRead) + " minute read"
+              : Math.round(remarkPluginFrontmatter.minutesRead * 60) +
+                " second read"
           }</span
         >
       </div>
@@ -75,7 +93,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
           <ul class="tags">
             {tags.map((tag) => (
               <li class="tags-item">
-                <Tag name={tag} type="blog" />
+                <Tag name={tag} type="blog" client:load />
               </li>
             ))}
           </ul>
@@ -105,7 +123,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
   <div class="prev-and-next-posts">
     {
       prevPost && (
-        <a class="prev-post" href={slugToRoute(prevPost.slug, 'blog')}>
+        <a class="prev-post" href={slugToRoute(prevPost.slug, "blog")}>
           <span>← Previous post</span>
           {prevPost.data.title}
         </a>
@@ -114,7 +132,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
     {
       nextPost && (
-        <a class="next-post" href={slugToRoute(nextPost.slug, 'blog')}>
+        <a class="next-post" href={slugToRoute(nextPost.slug, "blog")}>
           <span>Next post →</span>
           {nextPost.data.title}
         </a>
@@ -197,7 +215,7 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
 
       .created-date,
       .reading-time {
-        font-family: 'Fira Code';
+        font-family: "Fira Code";
         font-size: 1em;
       }
     }
@@ -210,7 +228,11 @@ const imgSrc = thumbnail?.src ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).t
       margin: 0 0 0.5rem 0;
       font-size: 2em;
       width: fit-content;
-      background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
+      background: -webkit-linear-gradient(
+        45deg,
+        var(--accent-1),
+        var(--accent-2)
+      );
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }

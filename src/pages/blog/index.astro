@@ -1,17 +1,17 @@
 ---
-import { CollectionEntry, getCollection } from 'astro:content';
-import PageCard from '../../components/PageCard.astro';
-import Tag from '../../components/Tag.astro';
-import BasePageLayout from '../../layouts/BasePageLayout.astro';
+import { CollectionEntry, getCollection } from "astro:content";
+import PageCard from "../../components/PageCard.svelte";
+import Tag from "../../components/Tag.svelte";
+import BasePageLayout from "../../layouts/BasePageLayout.astro";
 
-const year = +(Astro.url.searchParams.get('year') ?? 'NaN');
-const month = +(Astro.url.searchParams.get('month') ?? 'NaN');
-const day = +(Astro.url.searchParams.get('day') ?? 'NaN');
-const tags = Astro.url.searchParams.getAll('tag');
+const year = +(Astro.url.searchParams.get("year") ?? "NaN");
+const month = +(Astro.url.searchParams.get("month") ?? "NaN");
+const day = +(Astro.url.searchParams.get("day") ?? "NaN");
+const tags = Astro.url.searchParams.getAll("tag");
 
 const posts = (
-  await getCollection<'blog'>(
-    'blog',
+  await getCollection<"blog">(
+    "blog",
     ({ data }) =>
       (!year || +year === data.createdAt.getFullYear()) &&
       (!month || +month === data.createdAt.getMonth()) &&
@@ -19,7 +19,7 @@ const posts = (
       (tags.length === 0 || tags.every((tag) => data.tags?.includes(tag)))
   )
 ).sort((a, b) => b.data.id - a.data.id);
-const postsByYear = new Map<number, CollectionEntry<'blog'>[]>();
+const postsByYear = new Map<number, CollectionEntry<"blog">[]>();
 
 for (const post of posts) {
   const year = post.data.createdAt?.getFullYear();
@@ -34,17 +34,28 @@ for (const post of posts) {
 <BasePageLayout
   title="Blog - Joona Aalto"
   metaDescription="This is my blog where I write about my projects and cover a variety of subjects, such as science, programming, and game development."
-  metaKeywords={['Programming', 'Web development', 'Technology', 'Science', 'Games', 'Game development']}
+  metaKeywords={[
+    "Programming",
+    "Web development",
+    "Technology",
+    "Science",
+    "Games",
+    "Game development",
+  ]}
 >
   <header>
     <h1>Blog</h1>
     <p>
-      This is my personal blog where I show my journey as a developer while exploring various science and technology
-      topics that interest me.
+      This is my personal blog where I show my journey as a developer while
+      exploring various science and technology topics that interest me.
     </p>
     <p>
-      Occasionally I may also make some <Tag name="Devlog" type="blog" />s and <Tag name="Tutorial" type="blog" />s when
-      I find a good topic.
+      Occasionally I may also make some <Tag
+        name="Devlog"
+        type="blog"
+        client:load
+      />s and <Tag name="Tutorial" type="blog" client:load />s when I find a
+      good topic.
     </p>
   </header>
 
@@ -77,7 +88,11 @@ for (const post of posts) {
   h1 {
     font-size: 2.5em;
     width: fit-content;
-    background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
+    background: -webkit-linear-gradient(
+      45deg,
+      var(--accent-1),
+      var(--accent-2)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }

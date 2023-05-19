@@ -15,7 +15,16 @@ const blog = defineCollection({
       format: z.enum(['avif', 'jpeg', 'png', 'webp']).optional(),
       width: z.number(),
       height: z.number()
-    }).optional()
+    }).optional(),
+    links: z.array(z.object({
+      url: z.string(),
+      text: z.string().optional(),
+      img: z.object({
+        src: z.string(),
+        darkThemeSrc: z.string().optional(),
+        alt: z.string()
+      }).optional()
+    })).optional()
   })
 });
 
@@ -34,6 +43,15 @@ const projects = defineCollection({
       width: z.number(),
       height: z.number()
     }).optional(),
+    links: z.array(z.object({
+      url: z.string(),
+      text: z.string().optional(),
+      img: z.object({
+        src: z.string(),
+        darkThemeSrc: z.string().optional(),
+        alt: z.string()
+      }).optional()
+    })).optional()
   })
 });
 
