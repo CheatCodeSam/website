@@ -21,4 +21,5 @@ pnpm-debug.log*
 .DS_Store
 
 # other
+.vscode
 src/content/types.generated.d.ts
