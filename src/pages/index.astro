@@ -49,20 +49,20 @@ const projects = (await getCollection<"projects">("projects")).sort(
   <main>
     <section>
       <h2>Recent blog posts</h2>
-      <ul>
+      <div class="page-card-list">
         {posts.slice(0, 3).map((post) => <PageCard page={post} client:load />)}
-      </ul>
+      </div>
     </section>
 
     <section>
       <h2>Recent projects</h2>
-      <ul>
+      <div class="page-card-list">
         {
           projects
             .slice(0, 3)
             .map((project) => <PageCard page={project} client:load />)
         }
-      </ul>
+      </div>
     </section>
   </main>
 </BasePageLayout>
@@ -125,7 +125,7 @@ const projects = (await getCollection<"projects">("projects")).sort(
     color: var(--accent-2);
   }
 
-  ul {
+  .page-card-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;

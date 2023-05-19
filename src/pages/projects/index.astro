@@ -33,11 +33,11 @@ for (const project of projects) {
       [...projectsByYear.entries()].map(([year, projects]) => (
         <div class="project-group">
           <h2>{year}</h2>
-          <ul>
+          <div class="project-list">
             {projects.map((project) => (
               <PageCard page={project} client:load />
             ))}
-          </ul>
+          </div>
         </div>
       ))
     }
@@ -82,12 +82,10 @@ for (const project of projects) {
     padding-bottom: 1.5rem;
   }
 
-  .project-group ul {
+  .project-list {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
     width: 100%;
-    padding: 0;
-    margin: 0;
   }
 </style>

@@ -19,7 +19,7 @@
   onMount(() => (mounted = true));
 </script>
 
-<li class="card-container">
+<div class="card-container">
   <TimeLabel
     className="time-label"
     date={new Date(page.data.createdAt)}
@@ -53,7 +53,7 @@
               >
                 {#if link.img}
                   <img
-                    src={link.img.darkThemeSrc && $theme === "dark"
+                    src={link.img.darkThemeSrc && currentTheme === "dark"
                       ? link.img.darkThemeSrc
                       : link.img.src}
                     alt={link.img.alt}
@@ -97,7 +97,7 @@
       {/if}
     </div>
   </div>
-</li>
+</div>
 
 <style lang="scss">
   $gap: 1rem;
@@ -108,7 +108,6 @@
     position: relative;
     display: flex;
     gap: $gap;
-    list-style: none;
     color: var(--text-color-1);
   }
 
