@@ -40,7 +40,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#1e1e23" />
 
-    <!-- KaTeX  -->
+    <!-- KaTeX -->
     <link
       rel="stylesheet preload"
       href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css"
@@ -48,7 +48,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       crossorigin="anonymous"
     />
 
-    <!-- Fonts  -->
+    <!-- Fonts -->
     <link
       rel="preload"
       href="/fonts/Fira_Code/FiraCode-VariableFont_wght.ttf"
@@ -63,6 +63,9 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
       type="font/ttf"
       crossorigin="anonymous"
     />
+
+    <!-- Sitemap -->
+    <link rel="sitemap" href="/sitemap-index.xml" />
 
     <title>{title}</title>
     <meta name="description" content={metaDescription} />
