@@ -66,7 +66,7 @@ for (const post of posts) {
           <h2>{year}</h2>
           <ul>
             {posts.map((post) => (
-              <PageCard page={post} />
+              <PageCard page={post} client:load />
             ))}
           </ul>
         </div>
