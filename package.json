@@ -30,6 +30,7 @@
     "unified": "^10.1.2"
   },
   "devDependencies": {
+    "@astrojs/partytown": "^1.2.2",
     "sass": "^1.58.0"
   }
 }

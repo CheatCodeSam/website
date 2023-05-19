@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import netlify from "@astrojs/netlify/functions";
 import sitemap from "@astrojs/sitemap";
+import partytown from "@astrojs/partytown";
 import image from '@astrojs/image';
 import svelte from '@astrojs/svelte';
 import compress from "astro-compress";
@@ -14,7 +15,7 @@ export default defineConfig({
   output: 'server',
   adapter: netlify(),
   site: 'https://joonaa.dev',
-  integrations: [image(), svelte(), compress(), sitemap()],
+  integrations: [image(), svelte(), compress(), sitemap(), partytown({ config: { forward: ['dataLayer.push'] } })],
   markdown: {
     shikiConfig: {
       theme: 'github-dark',
