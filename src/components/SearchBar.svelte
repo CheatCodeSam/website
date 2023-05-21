@@ -86,8 +86,9 @@
       }
     }
 
-    if (event.key === 'Enter') {
-      window.location.pathname = getItemUrl(filteredItems[selectedIndex]) || window.location.pathname;
+    if (event.key === "Enter") {
+      window.location.href =
+        getItemUrl(filteredItems[selectedIndex]) || window.location.href;
     }
   }
 </script>
