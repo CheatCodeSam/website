@@ -1,16 +1,13 @@
 <script lang="ts">
-  import type { CollectionEntry } from 'astro:content';
-  import { createEventDispatcher } from 'svelte';
-  import { slugToRoute } from '../utils';
-  import TimeLabel from './TimeLabel.svelte';
+  import { createEventDispatcher } from "svelte";
+  import type { SearchEntry } from "../types";
 
-  type Item = CollectionEntry<'blog'> | CollectionEntry<'projects'>;
-  export let items: Item[] = [];
+  export let entries: SearchEntry[] = [];
 
   const dispatch = createEventDispatcher();
-  let filteredItems = items;
+  let filteredItems = entries;
 
-  let searchTerm = '';
+  let searchTerm = "";
   let selectedIndex = 0;
   let searchBarFocused = false;
   let searchBarElement: HTMLInputElement;
@@ -21,25 +18,23 @@
   $: smallLayout = !windowWidth || windowWidth <= 640;
 
   $: {
-    filteredItems = items.filter((item) => isValid(item, searchTerm));
+    filteredItems = entries.filter((item) => isValid(item, searchTerm));
 
     if (selectedIndex > filteredItems.length - 1) {
       selectedIndex = filteredItems.length - 1;
     }
 
-    dispatch('search', filteredItems);
+    dispatch("search", filteredItems);
   }
 
-  const getItemUrl = (item: Item) => item.data.url || slugToRoute(item.slug, item.collection);
-
-  function isValid(item: Item, searchTerm: string): boolean {
-    let slice = item.data.title?.toLowerCase();
+  function isValid(item: SearchEntry, searchTerm: string): boolean {
+    let slice = item.title.toLowerCase();
 
     if (!slice) {
       return false;
     }
 
-    for (const char of searchTerm.toLowerCase().split('')) {
+    for (const char of searchTerm.toLowerCase().split("")) {
       if (!slice.includes(char)) {
         return false;
       }
@@ -50,52 +45,68 @@
   }
 
   function handleSearchBarKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       searchBarElement.blur();
       searchOpen = false;
     }
 
+    let selectedHeight = selectedElement.offsetHeight;
+
+    let boxTop = searchBoxElement.scrollTop;
+    let selectedTop = selectedElement.offsetTop;
+    let selectedTopScrollPos = selectedTop - searchBarElement.offsetHeight;
+
+    let boxBottom = searchBoxElement.scrollTop + searchBoxElement.clientHeight;
+    let selectedBottom =
+      selectedElement.offsetTop + selectedElement.offsetHeight;
+    let selectedBottomScrollPos =
+      selectedBottom -
+      searchBoxElement.clientHeight -
+      searchBarElement.offsetHeight;
+
     // Scroll to make sure the selected item is visible
-    if (event.key === 'ArrowUp') {
+    if (event.key === "ArrowUp") {
       if (selectedIndex > 0) {
         event.preventDefault();
         selectedIndex--;
       }
 
-      let selectedTop = selectedElement.offsetTop - searchBarElement.offsetHeight;
-      let scrollTarget = selectedTop - selectedElement.offsetHeight;
+      // Selected entry above view
+      if (boxTop + selectedHeight > selectedTopScrollPos) {
+        searchBoxElement.scrollTo(0, selectedTopScrollPos - selectedHeight);
+      }
 
-      if (searchBoxElement.scrollTop > scrollTarget) {
-        searchBoxElement.scrollTo(0, scrollTarget);
+      if (boxBottom + selectedHeight < selectedBottom) {
+        searchBoxElement.scrollTo(0, selectedBottomScrollPos - selectedHeight);
       }
     }
 
     // Scroll to make sure the selected item is visible
-    if (event.key === 'ArrowDown') {
+    if (event.key === "ArrowDown") {
       if (selectedIndex < filteredItems.length - 1) {
         event.preventDefault();
         selectedIndex++;
       }
 
-      let boxBottom = searchBoxElement.offsetHeight;
-      let selectedBottom = selectedElement.offsetTop + selectedElement.offsetHeight - searchBarElement.offsetHeight;
-      let scrollTarget = selectedBottom - boxBottom + selectedElement.offsetHeight;
+      if (boxBottom < selectedBottom) {
+        searchBoxElement.scrollTo(0, selectedBottomScrollPos + selectedHeight);
+      }
 
-      if (searchBoxElement.scrollTop < scrollTarget) {
-        searchBoxElement.scrollTo(0, scrollTarget);
+      // Selected entry above view
+      if (boxTop > selectedTopScrollPos) {
+        searchBoxElement.scrollTo(0, selectedTopScrollPos + selectedHeight);
       }
     }
 
     if (event.key === "Enter") {
-      window.location.href =
-        getItemUrl(filteredItems[selectedIndex]) || window.location.href;
+      window.location.href = filteredItems[selectedIndex].href;
     }
   }
 </script>
 
 <svelte:window
   on:keydown={(event) => {
-    if (event.key === 'k' && event.ctrlKey) {
+    if (event.key === "k" && event.ctrlKey) {
       event.preventDefault();
       searchOpen = true;
       searchBarElement.focus();
@@ -106,7 +117,10 @@
 
 <button class="search-button" on:click={() => (searchOpen = true)}>🔍</button>
 
-<div class="search-bar" style:display={!smallLayout || searchOpen ? 'flex' : ''}>
+<div
+  class="search-bar"
+  style:display={!smallLayout || searchOpen ? "flex" : ""}
+>
   <input
     type="search"
     name="searchBar"
@@ -122,54 +136,45 @@
   <button
     class="close-search-button"
     on:click={() => (searchOpen = false)}
-    style:display={smallLayout && searchOpen ? 'flex' : ''}>x</button
+    style:display={smallLayout && searchOpen ? "flex" : ""}>x</button
   >
 
-  <div class="search-box" style:display={searchBarFocused || searchOpen ? 'block' : ''}>
-    {#if searchTerm !== ''}
-      <hr />
-      <ul
-        on:mousedown|preventDefault={(_) => {}}
-        style:height={smallLayout ? '100%' : filteredItems.length > 0 ? filteredItems.length * 2.5 + 'rem' : '2.5rem'}
-        bind:this={searchBoxElement}
-      >
-        {#each filteredItems as item, index}
-          {#if selectedIndex === index}
-            <li class="search-result selected" bind:this={selectedElement}>
-              <a href={getItemUrl(item)}>
-                <span class="search-result-title">{item.data.title}</span>
-
-                <TimeLabel
-                  className="time-label"
-                  date={new Date(item.data.createdAt)}
-                  yearFormat={'numeric'}
-                  monthFormat={'short'}
-                  dayFormat={'2-digit'}
-                />
-              </a>
-            </li>
-          {:else}
-            <li class="search-result">
-              <a href={getItemUrl(item)}>
-                <span class="search-result-title">{item.data.title}</span>
-
-                <TimeLabel
-                  className="time-label"
-                  date={new Date(item.data.createdAt)}
-                  yearFormat={'numeric'}
-                  monthFormat={'short'}
-                  dayFormat={'2-digit'}
-                />
-              </a>
-            </li>
-          {/if}
-        {/each}
-
-        {#if filteredItems.length === 0}
-          <li class="no-results">No results found.</li>
+  <div
+    class="search-box"
+    style:display={searchBarFocused || searchOpen ? "block" : ""}
+  >
+    <hr />
+    <ul
+      on:mousedown|preventDefault={(_) => {}}
+      style:height={smallLayout
+        ? "100%"
+        : filteredItems.length > 0
+        ? filteredItems.length * 2.5 + "rem"
+        : "2.5rem"}
+      bind:this={searchBoxElement}
+    >
+      {#each filteredItems as item, index}
+        {#if selectedIndex === index}
+          <li class={"search-result selected"} bind:this={selectedElement}>
+            <a href={item.href}>
+              <span class="search-result-type">{item.type}</span>
+              <span class="search-result-title">{item.title}</span>
+            </a>
+          </li>
+        {:else}
+          <li class={"search-result"}>
+            <a href={item.href}>
+              <span class="search-result-type">{item.type}</span>
+              <span class="search-result-title">{item.title}</span>
+            </a>
+          </li>
         {/if}
-      </ul>
-    {/if}
+      {/each}
+
+      {#if filteredItems.length === 0}
+        <li class="no-results">No results found.</li>
+      {/if}
+    </ul>
   </div>
 </div>
 
@@ -248,6 +253,9 @@
     overflow: hidden;
 
     hr {
+      position: absolute;
+      top: var(--search-bar-input-height);
+      width: 100%;
       height: 2px;
       color: var(--bg-2);
       background-color: var(--bg-2);
@@ -279,11 +287,16 @@
         a {
           width: 100%;
           display: flex;
-          justify-content: space-between;
           gap: 1rem;
           overflow: hidden;
           color: var(--text-color-1);
           text-decoration: none;
+        }
+
+        .search-result-type {
+          display: block;
+          min-width: 4rem;
+          color: var(--text-color-2);
         }
       }
     }

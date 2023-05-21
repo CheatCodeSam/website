@@ -1,13 +1,43 @@
 ---
-import { getCollection } from 'astro:content';
-import SearchBar from './SearchBar.svelte';
-import ThemeToggle from './ThemeToggle.svelte';
+import { CollectionEntry, getCollection } from "astro:content";
+import SearchBar from "./SearchBar.svelte";
+import ThemeToggle from "./ThemeToggle.svelte";
+import { slugToRoute } from "../utils";
+import type { SearchEntry } from "../types";
 
-const posts = await getCollection<'blog'>('blog');
-const projects = await getCollection<'projects'>('projects');
-const pages = [...posts, ...projects].sort((a, b) =>
-  a.collection === 'blog' && b.collection === 'blog' ? b.data.id - a.data.id : +b.data.createdAt - +a.data.createdAt
-);
+type Entry = CollectionEntry<"blog"> | CollectionEntry<"projects">;
+
+const posts = await getCollection<"blog">("blog");
+const projects = await getCollection<"projects">("projects");
+const pages = [...posts, ...projects].sort(pageSortFn);
+const searchEntries: SearchEntry[] = [
+  ...pages.map((page) => ({
+    type: page.collection === "blog" ? "Blog" : "Project",
+    collection: page.collection,
+    title: page.data.title,
+    tags: page.data.tags,
+    href: getEntryHref(page),
+  })),
+  { type: "Page", title: "Home", href: "/" },
+  { type: "Page", title: "Blog", href: "/blog" },
+  { type: "Page", title: "Projects", href: "/projects" },
+];
+
+function pageSortFn(a: Entry, b: Entry) {
+  if (a.collection === "blog" && b.collection === "blog") {
+    return b.data.id - a.data.id;
+  } else {
+    return +b.data.createdAt - +a.data.createdAt;
+  }
+}
+
+function getEntryHref(item: Entry) {
+  return (
+    item.data.url ||
+    slugToRoute(item.slug, item.collection) ||
+    window.location.href
+  );
+}
 ---
 
 <nav>
@@ -29,7 +59,7 @@ const pages = [...posts, ...projects].sort((a, b) =>
   </ul>
 
   <div class="search-bar-container">
-    <SearchBar client:load items={pages} />
+    <SearchBar client:load entries={searchEntries} />
   </div>
 
   <div class="theme-toggle-container">
