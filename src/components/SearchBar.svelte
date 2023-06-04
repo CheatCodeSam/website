@@ -225,14 +225,14 @@
       position: absolute;
       width: 100%;
       height: var(--search-bar-input-height);
-      padding: 0 1.5rem;
+      padding: 0 1rem;
       box-sizing: border-box;
       outline: none;
       border: none;
       border-radius: 0.5rem;
       background-color: transparent;
-      font-size: 1.2em;
-      font-family: monospace;
+      font-size: 1em;
+      font-family: system-ui, -apple-system, sans-serif;
       color: var(--text-color-1);
       z-index: 1;
     }
@@ -273,7 +273,7 @@
       li {
         width: 100%;
         height: 2.5rem;
-        padding: 0 1.5rem;
+        padding: 0 1rem;
         line-height: 2.5rem;
         font-size: 1.1em;
         box-sizing: border-box;
@@ -295,7 +295,7 @@
 
         .search-result-type {
           display: block;
-          min-width: 4rem;
+          min-width: 3rem;
           color: var(--text-color-2);
         }
       }
