@@ -6,9 +6,14 @@ export interface Props {
   metaDescription?: string;
   metaKeywords?: string[];
   metaImageSrc?: string;
+  canonical?: string;
 }
 
-const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
+const { title, metaDescription, metaKeywords, metaImageSrc, canonical } =
+  Astro.props;
+
+const canonicalUrl =
+  "https://joonaa.dev" + (canonical ? canonical : Astro.url.pathname);
 ---
 
 <!DOCTYPE html>
@@ -44,7 +49,9 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <link
       rel="preload"
       as="style"
-      onload="this.rel='stylesheet'"
+      onload="
+      this.rel = 'stylesheet'
+      "
       href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css"
       integrity="sha384-Xi8rHCmBmhbuyyhbI88391ZKP2dmfnOl4rT9ZfRI7mLTdk1wblIUnrIq35nqwEvC"
       crossorigin="anonymous"
@@ -68,6 +75,8 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
 
     <!-- Sitemap -->
     <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <link rel="canonical" href={canonicalUrl} />
 
     <title>{title}</title>
     <meta name="description" content={metaDescription} />
@@ -152,8 +161,7 @@ const { title, metaDescription, metaKeywords, metaImageSrc } = Astro.props;
     <!-- Partytown and Google Analytics -->
     <script
       type="text/partytown"
-      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"
-    ></script>
+      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"></script>
     <script type="text/partytown">
       window.dataLayer = window.dataLayer || [];
       function gtag() {
