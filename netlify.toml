@@ -11,8 +11,3 @@
     for = "*.css"
     [headers.values]
         Cache-Control = "public, max-age=604800"
-
-[[headers]]
-    for = "*.ttf"
-    [headers.values]
-        Cache-Control = "public, max-age=604800"

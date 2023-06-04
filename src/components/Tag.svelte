@@ -47,12 +47,12 @@
   .tag {
     display: inline;
     padding: 0.3em 0.45em;
-    font-size: 0.8em;
+    font-size: 1.1em;
     font-weight: bold;
     background: rgba(var(--accent-1-rgb), 10%);
     color: var(--accent-1);
     border-radius: 0.4rem;
     text-decoration: none;
-    font-family: "Fira Code", monospace;
+    font-family: monospace;
   }
 </style>
