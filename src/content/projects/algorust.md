@@ -20,7 +20,6 @@ links:
     url: "https://github.com/Jondolf/Algorust"
     text: "GitHub"
     img:
-      src: "/assets/github-mark.png"
-      darkThemeSrc: "/assets/github-mark-white.png"
+      src: "/assets/github-mark-white.png"
       alt: "GitHub logo"
 ---

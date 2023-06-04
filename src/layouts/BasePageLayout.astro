@@ -97,67 +97,6 @@ const canonicalUrl =
       )
     }
 
-    <!-- Init theme  -->
-    <script is:inline>
-      updateTheme(JSON.parse(localStorage.getItem("theme") ?? "auto"));
-
-      function updateTheme(theme) {
-        if (theme === "dark") {
-          document.documentElement.classList.remove("light");
-          document.documentElement.classList.add("dark");
-        } else if (theme === "light") {
-          document.documentElement.classList.remove("dark");
-          document.documentElement.classList.add("light");
-        } else if (theme === "auto") {
-          if (
-            window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches
-          ) {
-            document.documentElement.classList.remove("light");
-            document.documentElement.classList.add("dark");
-          } else {
-            document.documentElement.classList.remove("dark");
-            document.documentElement.classList.add("light");
-          }
-        }
-      }
-    </script>
-    <!-- Update theme when prefers-color-scheme changes -->
-    <script>
-      const theme = JSON.parse(localStorage.getItem("theme") ?? '"auto"');
-      // @ts-ignore
-      updateTheme(theme);
-
-      // Change theme when the theme store's value changes.
-      const { theme: themeStore } = await import("../stores");
-      themeStore.set(theme);
-
-      // Update theme when user's preferred color scheme changes (stored theme still overrides this).
-      const prefersLight = window.matchMedia("(prefers-color-scheme: light)");
-      prefersLight.addEventListener("change", (e) => {
-        if (
-          e.matches &&
-          JSON.parse(localStorage.getItem("theme") ?? '"auto"') === "auto"
-        ) {
-          // @ts-ignore
-          themeStore.set(updateTheme("auto"));
-        }
-      });
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
-      prefersDark.addEventListener("change", (e) => {
-        if (
-          e.matches &&
-          JSON.parse(localStorage.getItem("theme") ?? '"auto"') === "auto"
-        ) {
-          // @ts-ignore
-          themeStore.set(updateTheme("auto"));
-        }
-      });
-
-      // @ts-ignore
-      themeStore.subscribe((theme) => theme && updateTheme(theme));
-    </script>
-
     <!-- Partytown and Google Analytics -->
     <script
       type="text/partytown"
@@ -172,15 +111,12 @@ const canonicalUrl =
     </script>
   </head>
 
-  <body class="dark">
+  <body>
     <Nav />
 
     <slot />
 
     <style lang="scss" is:global>
-      @use "../../public/themes/light.scss";
-      @use "../../public/themes/dark.scss";
-
       /* For browsers that support variable fonts */
       @supports (font-variation-settings: normal) {
         @font-face {
@@ -251,16 +187,23 @@ const canonicalUrl =
       }
 
       :root {
-        color-scheme: light dark;
+        --accent-1-rgb: 0, 200, 255;
+        --accent-1: rgb(var(--accent-1-rgb));
+        --accent-2-rgb: 0, 255, 170;
+        --accent-2: rgb(var(--accent-2-rgb));
+        --bg-1-rgb: 30, 30, 35;
+        --bg-1: rgb(var(--bg-1-rgb));
+        --bg-2-rgb: 45, 45, 50;
+        --bg-2: rgb(var(--bg-2-rgb));
+        --text-color-1-rgb: 225, 225, 230;
+        --text-color-1: rgb(var(--text-color-1-rgb));
+        --text-color-2-rgb: 185, 185, 190;
+        --text-color-2: rgb(var(--text-color-2-rgb));
+        --link-color-rgb: 90, 180, 255;
+        --link-color: rgb(var(--link-color-rgb));
+
+        color-scheme: dark;
         color: var(--text-color-1);
-
-        &.light {
-          @include light.theme-variables;
-        }
-
-        &.dark {
-          @include dark.theme-variables;
-        }
       }
 
       html {

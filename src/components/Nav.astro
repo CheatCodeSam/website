@@ -41,12 +41,15 @@ function getEntryHref(item: Entry) {
 ---
 
 <nav>
+  <div class="title">
+    <a href="/">Joona Aalto</a>
+  </div>
+
+  <div class="search-bar-container">
+    <SearchBar client:load entries={searchEntries} />
+  </div>
+
   <ul>
-    <li>
-      <a href="/">
-        <img class="logo" src="/icons/icon.svg" alt="My logo" />
-      </a>
-    </li>
     <li>
       <a href="/">Home</a>
     </li>
@@ -57,14 +60,6 @@ function getEntryHref(item: Entry) {
       <a href="/blog">Blog</a>
     </li>
   </ul>
-
-  <div class="search-bar-container">
-    <SearchBar client:load entries={searchEntries} />
-  </div>
-
-  <div class="theme-toggle-container">
-    <ThemeToggle client:load />
-  </div>
 </nav>
 
 <style lang="scss">
@@ -86,10 +81,26 @@ function getEntryHref(item: Entry) {
     z-index: 10;
   }
 
+  .title {
+    display: block;
+    flex: 1;
+
+    a {
+      color: var(--text-color-1);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1.1em;
+
+      &:hover {
+        color: var(--link-color);
+      }
+    }
+  }
+
   ul {
     flex: 1;
     display: flex;
-    justify-content: start;
+    justify-content: end;
     align-items: center;
     height: 100%;
     gap: 1rem;
@@ -106,18 +117,7 @@ function getEntryHref(item: Entry) {
       &:hover {
         color: var(--link-color);
       }
-
-      img.logo {
-        width: 2rem;
-        height: 2rem;
-      }
     }
-  }
-
-  .theme-toggle-container {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
   }
 
   .search-bar-container {
@@ -126,11 +126,5 @@ function getEntryHref(item: Entry) {
     box-sizing: border-box;
     display: flex;
     justify-content: flex-end;
-  }
-
-  :global(.light) {
-    img.logo {
-      filter: brightness(0.9);
-    }
   }
 </style>

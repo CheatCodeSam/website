@@ -4,19 +4,12 @@
   import Markdown from "./Markdown.svelte";
   import Tag from "./Tag.svelte";
   import TimeLabel from "./TimeLabel.svelte";
-  import { getPreferredTheme, theme } from "../stores";
-  import { onMount } from "svelte";
 
   export let page: CollectionEntry<"blog"> | CollectionEntry<"projects">;
 
-  let mounted = false;
   let description =
     page.data.description ?? getDescriptionFromText(page.body, 160);
   let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
-
-  $: currentTheme = $theme === "auto" && mounted ? getPreferredTheme() : $theme;
-
-  onMount(() => (mounted = true));
 </script>
 
 <div class="card-container">
@@ -53,9 +46,7 @@
               >
                 {#if link.img}
                   <img
-                    src={link.img.darkThemeSrc && currentTheme === "dark"
-                      ? link.img.darkThemeSrc
-                      : link.img.src}
+                    src={link.img.src}
                     alt={link.img.alt}
                     width="32"
                     height="32"
