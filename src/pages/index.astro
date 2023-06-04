@@ -50,18 +50,14 @@ const projects = (await getCollection<"projects">("projects")).sort(
     <section>
       <h2>Recent blog posts</h2>
       <div class="page-card-list">
-        {posts.slice(0, 3).map((post) => <PageCard page={post} client:load />)}
+        {posts.slice(0, 3).map((post) => <PageCard page={post} />)}
       </div>
     </section>
 
     <section>
       <h2>Recent projects</h2>
       <div class="page-card-list">
-        {
-          projects
-            .slice(0, 3)
-            .map((project) => <PageCard page={project} client:load />)
-        }
+        {projects.slice(0, 3).map((project) => <PageCard page={project} />)}
       </div>
     </section>
   </main>

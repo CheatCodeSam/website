@@ -1,6 +1,6 @@
 ---
 import { CollectionEntry, getCollection } from "astro:content";
-import PageCard from "../../components/PageCard.svelte";
+import PageCard from "../../components/PageCard.astro";
 import Tag from "../../components/Tag.svelte";
 import BasePageLayout from "../../layouts/BasePageLayout.astro";
 
@@ -67,7 +67,7 @@ for (const post of posts) {
 
           <div class="post-list">
             {posts.map((post) => (
-              <PageCard page={post} client:load />
+              <PageCard page={post} />
             ))}
           </div>
         </div>

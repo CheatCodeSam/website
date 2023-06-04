@@ -1,6 +1,6 @@
 ---
 import { CollectionEntry, getCollection } from "astro:content";
-import PageCard from "../../components/PageCard.svelte";
+import PageCard from "../../components/PageCard.astro";
 import BasePageLayout from "../../layouts/BasePageLayout.astro";
 
 const projects = (await getCollection<"projects">("projects")).sort(
@@ -35,7 +35,7 @@ for (const project of projects) {
           <h2>{year}</h2>
           <div class="project-list">
             {projects.map((project) => (
-              <PageCard page={project} client:load />
+              <PageCard page={project} />
             ))}
           </div>
         </div>

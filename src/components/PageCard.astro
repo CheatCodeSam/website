@@ -1,16 +1,21 @@
-<script lang="ts">
-  import type { CollectionEntry } from "astro:content";
-  import { getDescriptionFromText, slugToRoute } from "../utils";
-  import Markdown from "./Markdown.svelte";
-  import Tag from "./Tag.svelte";
-  import TimeLabel from "./TimeLabel.svelte";
+---
+import type { CollectionEntry } from "astro:content";
+import { getDescriptionFromText, slugToRoute } from "../utils";
+import Markdown from "./Markdown.svelte";
+import Tag from "./Tag.svelte";
+import TimeLabel from "./TimeLabel.svelte";
+import { Image } from "astro:assets";
 
-  export let page: CollectionEntry<"blog"> | CollectionEntry<"projects">;
+interface Props {
+  page: CollectionEntry<"blog"> | CollectionEntry<"projects">;
+}
 
-  let description =
-    page.data.description ?? getDescriptionFromText(page.body, 160);
-  let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
-</script>
+const { page } = Astro.props;
+
+let description =
+  page.data.description ?? getDescriptionFromText(page.body, 160);
+let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
+---
 
 <div class="card-container">
   <TimeLabel
@@ -34,58 +39,55 @@
         <a href={pageUrl}>{page.data.title}</a>
       </h2>
 
-      {#if page.data.links}
-        <ul class="links">
-          {#each page.data.links as link}
-            <li>
-              <a
-                href={link.url}
-                title={link.text || ""}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {#if link.img}
-                  <img
-                    src={link.img.src}
-                    alt={link.img.alt}
-                    width="32"
-                    height="32"
-                  />
-                {/if}
-              </a>
-            </li>
-          {/each}
-        </ul>
-      {/if}
+      {
+        page.data.links && (
+          <ul class="links">
+            {page.data.links.map((link) => (
+              <li>
+                <a
+                  href={link.url}
+                  title={link.text || ""}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {link.img && <Image src={link.img} alt={link.imgAlt || ""} />}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
     </div>
 
     <div class="card-body">
       <div class="card-content">
-        {#if page.data.tags}
-          <ul class="tags">
-            {#each page.data.tags as tag}
-              <li class="tags-item">
-                <Tag name={tag} type={page.collection} />
-              </li>
-            {/each}
-          </ul>
-        {/if}
+        {
+          page.data.tags && (
+            <ul class="tags">
+              {page.data.tags.map((tag) => (
+                <li class="tags-item">
+                  <Tag name={tag} type={page.collection} />
+                </li>
+              ))}
+            </ul>
+          )
+        }
 
         <div class="description">
           <Markdown markdown={description} />
         </div>
       </div>
 
-      {#if page.data.thumbnail}
-        <a class="thumbnail" href={pageUrl} title={page.data.title}>
-          <img
-            src={page.data.thumbnail.src}
-            alt={page.data.thumbnail.alt}
-            width={page.data.thumbnail.width}
-            height={page.data.thumbnail.height}
-          />
-        </a>
-      {/if}
+      {
+        page.data.thumbnail && (
+          <a class="thumbnail" href={pageUrl} title={page.data.title}>
+            <Image
+              src={page.data.thumbnail}
+              alt={page.data.thumbnailAlt || ""}
+            />
+          </a>
+        )
+      }
     </div>
   </div>
 </div>
@@ -169,7 +171,7 @@
         gap: 0.5rem;
       }
 
-      img {
+      :global(img) {
         display: block;
         width: 2rem;
         height: 2rem;

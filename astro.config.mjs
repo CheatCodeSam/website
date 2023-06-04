@@ -2,7 +2,6 @@ import { defineConfig } from 'astro/config';
 import netlify from "@astrojs/netlify/functions";
 import sitemap from "@astrojs/sitemap";
 import partytown from "@astrojs/partytown";
-import image from '@astrojs/image';
 import svelte from '@astrojs/svelte';
 import compress from "astro-compress";
 import remarkMath from 'remark-math';
@@ -15,7 +14,7 @@ export default defineConfig({
   output: 'server',
   adapter: netlify(),
   site: 'https://joonaa.dev',
-  integrations: [image(), svelte(), compress(), sitemap(), partytown({ config: { forward: ['dataLayer.push'] } })],
+  integrations: [svelte(), compress(), sitemap(), partytown({ config: { forward: ['dataLayer.push'] } })],
   markdown: {
     shikiConfig: {
       theme: 'github-dark',
@@ -23,5 +22,8 @@ export default defineConfig({
     },
     remarkPlugins: [remarkMath, remarkReadingTime],
     rehypePlugins: [rehypeKatex]
+  },
+  experimental: {
+    assets: true
   }
 });
