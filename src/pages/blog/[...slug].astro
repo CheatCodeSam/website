@@ -1,5 +1,5 @@
 ---
-import { Image } from "@astrojs/image/components";
+import { Image } from "astro:assets";
 import { getCollection } from "astro:content";
 import Tag from "../../components/Tag.svelte";
 import TimeLabel from "../../components/TimeLabel.svelte";
@@ -33,7 +33,8 @@ if (
 }
 
 const { Content, headings, remarkPluginFrontmatter } = await post.render();
-const { title, description, tags, thumbnail, createdAt } = post.data;
+const { title, description, tags, thumbnail, thumbnailAlt, createdAt } =
+  post.data;
 const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src
   ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString()
@@ -102,15 +103,7 @@ const imgSrc = thumbnail?.src
 
       {
         thumbnail && (
-          <Image
-            class="thumbnail"
-            src={thumbnail.src}
-            alt={thumbnail.alt}
-            width={thumbnail.width}
-            height={thumbnail.height}
-            aspectRatio={`${thumbnail.width}:${thumbnail.height}`}
-            format={thumbnail.format}
-          />
+          <Image class="thumbnail" src={thumbnail} alt={thumbnailAlt || ""} />
         )
       }
     </header>
