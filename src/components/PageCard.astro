@@ -66,7 +66,7 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
             <ul class="tags">
               {page.data.tags.map((tag) => (
                 <li class="tags-item">
-                  <Tag name={tag} type={page.collection} />
+                  <Tag name={tag} type={page.collection} client:load />
                 </li>
               ))}
             </ul>
