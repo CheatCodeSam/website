@@ -1,6 +1,7 @@
 {
     "name": "Joona Aalto",
     "short_name": "Joona Aalto",
+    "start_url": ".",
     "icons": [
         {
             "src": "/icons/android-chrome-192x192.png",
@@ -11,6 +12,12 @@
             "src": "/icons/android-chrome-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
+        },
+        {
+            "src": "/icons/maskable_icon.png",
+            "sizes": "640x640",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "theme_color": "#1e1e23",
