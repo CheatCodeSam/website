@@ -9,17 +9,12 @@ tags:
   - Rust
   - Visualization
   - Website
-thumbnail:
-  src: "/assets/algorust_thumbnail.png"
-  alt: "Algorust website thumbnail"
-  width: 480
-  height: 270
-  format: "png"
+thumbnail: "@assets/algorust_thumbnail.png"
+thumbnailAlt: "Algorust website thumbnail"
 links:
   -
     url: "https://github.com/Jondolf/Algorust"
     text: "GitHub"
-    img:
-      src: "/assets/github-mark-white.png"
-      alt: "GitHub logo"
+    img: "@assets/github-mark-white.png"
+    imgAlt: "GitHub logo"
 ---
