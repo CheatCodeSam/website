@@ -1,6 +1,6 @@
 ---
 import BasePageLayout from "../layouts/BasePageLayout.astro";
-import PageCard from "../components/PageCard.svelte";
+import PageCard from "../components/PageCard.astro";
 import { getCollection } from "astro:content";
 
 const posts = (await getCollection<"blog">("blog")).sort(
