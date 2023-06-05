@@ -76,18 +76,6 @@ const projects = (await getCollection<"projects">("projects")).sort(
     margin-right: auto;
   }
 
-  h1 {
-    font-size: 2.5em;
-    width: fit-content;
-    background: -webkit-linear-gradient(
-      45deg,
-      var(--accent-1),
-      var(--accent-2)
-    );
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
   header {
     padding-bottom: 1.5rem;
   }
@@ -108,8 +96,6 @@ const projects = (await getCollection<"projects">("projects")).sort(
   h2 {
     margin-top: 0;
     margin-bottom: 1.5rem;
-    font-size: 2em;
-    color: var(--accent-1);
   }
 
   h3 {

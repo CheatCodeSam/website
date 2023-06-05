@@ -1,16 +1,25 @@
 ---
-import BasePageLayout from '../../layouts/BasePageLayout.astro';
+import BasePageLayout from "../../layouts/BasePageLayout.astro";
 
-const redirectedFrom = Astro.url.searchParams.get('redirectedFrom');
+const redirectedFrom = Astro.url.searchParams.get("redirectedFrom");
 const requestedURL = `${Astro.url.origin}/projects/${redirectedFrom}`;
 ---
 
-<BasePageLayout title="404 Projects - Joona Aalto" metaDescription="The page you were looking for could not be found.">
+<BasePageLayout
+  title="404 Projects - Joona Aalto"
+  metaDescription="The page you were looking for could not be found."
+>
   <header>
     <h1>Oops!</h1>
     <p>
-      The page {redirectedFrom ? <a href={requestedURL}>{requestedURL}</a> : 'you were looking for'} could not be found.
-      Make sure the URL is correct or try looking for the page on the <a href="/projects">projects</a> page.
+      The page {
+        redirectedFrom ? (
+          <a href={requestedURL}>{requestedURL}</a>
+        ) : (
+          "you were looking for"
+        )
+      } could not be found. Make sure the URL is correct or try looking for the page
+      on the <a href="/projects">projects</a> page.
     </p>
   </header>
 </BasePageLayout>
@@ -22,14 +31,6 @@ const requestedURL = `${Astro.url.origin}/projects/${redirectedFrom}`;
     padding: 0 1.5rem;
     box-sizing: border-box;
     margin: auto;
-  }
-
-  h1 {
-    font-size: 2.5em;
-    width: fit-content;
-    background: -webkit-linear-gradient(45deg, var(--accent-1), var(--accent-2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 
   header p {
