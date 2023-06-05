@@ -311,7 +311,7 @@
 
         .search-result-type {
           display: block;
-          min-width: 3rem;
+          min-width: 3.5rem;
           color: var(--text-color-2);
         }
       }
