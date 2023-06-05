@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import type { SearchEntry } from "../types";
 
   export let entries: SearchEntry[] = [];
@@ -15,7 +15,17 @@
   let searchBoxElement: HTMLElement;
   let windowWidth: number;
   let searchOpen = false;
+  let mounted = false;
+
   $: smallLayout = !windowWidth || windowWidth <= 640;
+
+  $: if (mounted) {
+    if (searchOpen && smallLayout) {
+      document?.body.classList.add("search-modal-open");
+    } else {
+      document?.body.classList.remove("search-modal-open");
+    }
+  }
 
   $: {
     filteredItems = entries.filter((item) => isValid(item, searchTerm));
@@ -26,6 +36,8 @@
 
     dispatch("search", filteredItems);
   }
+
+  onMount(() => (mounted = true));
 
   function isValid(item: SearchEntry, searchTerm: string): boolean {
     let slice = item.title.toLowerCase();
@@ -179,6 +191,10 @@
 </div>
 
 <style lang="scss">
+  :global(body.search-modal-open) {
+    overflow: hidden;
+  }
+
   button {
     display: flex;
     justify-content: center;
