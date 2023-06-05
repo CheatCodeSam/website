@@ -275,6 +275,7 @@
       height: 2px;
       color: var(--bg-2);
       background-color: var(--bg-2);
+      border: none;
       margin: 0;
     }
 
