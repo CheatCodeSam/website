@@ -83,14 +83,38 @@ function getEntryHref(item: Entry) {
     flex: 1;
 
     a {
+      width: fit-content;
+      height: 3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
       color: var(--text-color-1);
       text-decoration: none;
       font-weight: 600;
       font-size: 1.2em;
       white-space: nowrap;
+      transition: color 200ms ease;
 
       &:hover {
-        color: var(--link-color);
+        color: var(--accent-1);
+      }
+
+      &::before {
+        content: "";
+        position: absolute;
+        bottom: 0.4rem;
+        left: 50%;
+        transform: translate(-50%, 0);
+        width: 0;
+        height: 2px;
+        border-radius: 1px;
+        background: linear-gradient(45deg, var(--accent-1), var(--accent-2));
+        transition: width 200ms ease;
+      }
+
+      &:hover::before {
+        width: 100%;
       }
     }
   }
@@ -110,11 +134,30 @@ function getEntryHref(item: Entry) {
       display: flex;
       align-items: center;
       text-decoration: none;
+      position: relative;
       color: var(--text-color-1);
       height: 3rem;
+      transition: color 200ms ease;
 
       &:hover {
-        color: var(--link-color);
+        color: var(--accent-1);
+      }
+
+      &::before {
+        content: "";
+        position: absolute;
+        bottom: 0.4rem;
+        left: 50%;
+        transform: translate(-50%, 0);
+        width: 0;
+        height: 2px;
+        border-radius: 1px;
+        background: linear-gradient(45deg, var(--accent-1), var(--accent-2));
+        transition: width 200ms ease;
+      }
+
+      &:hover::before {
+        width: 100%;
       }
     }
   }
