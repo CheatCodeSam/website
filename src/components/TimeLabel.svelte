@@ -30,8 +30,6 @@
 
 <style lang="scss">
   time {
-    font-size: 1.1em;
-    font-family: monospace;
     margin: 0;
   }
 </style>

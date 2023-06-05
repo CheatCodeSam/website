@@ -18,13 +18,6 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 ---
 
 <div class="card-container">
-  <TimeLabel
-    className="time-label"
-    date={new Date(page.data.createdAt)}
-    monthFormat={"short"}
-    dayFormat={"2-digit"}
-  />
-
   <div class="card">
     <!-- This link is enlarged to fit the whole card using an absolutely positioned pseudo element. -->
     <a
@@ -61,6 +54,14 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 
     <div class="card-body">
       <div class="card-content">
+        <TimeLabel
+          className="created-at"
+          date={new Date(page.data.createdAt)}
+          yearFormat={"numeric"}
+          monthFormat={"short"}
+          dayFormat={"2-digit"}
+        />
+
         {
           page.data.tags && (
             <ul class="tags">
@@ -93,14 +94,10 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
 </div>
 
 <style lang="scss">
-  $gap: 1rem;
   $borderRadius: 0.6rem;
-  $timeLabelWidth: 6ch;
 
   .card-container {
     position: relative;
-    display: flex;
-    gap: $gap;
     color: var(--text-color-1);
   }
 
@@ -117,23 +114,19 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
       left: 0;
       z-index: 0;
       color: transparent;
+      user-select: none;
     }
   }
 
-  :global(.time-label) {
-    margin-top: 1rem;
-    display: block;
-    color: rgba(var(--text-color-2), 0.8);
-    min-width: $timeLabelWidth;
+  :global(.created-at) {
+    color: var(--text-color-2);
   }
 
   .card {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    width: calc(
-      100% - $timeLabelWidth - $gap
-    ); // The full width minus the width of the time label
+    width: 100%;
     box-sizing: border-box;
     background-color: var(--bg-2);
     border-radius: $borderRadius;
@@ -153,7 +146,7 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     h2 {
       margin: 0;
       padding: 0;
-      font-size: 1.25rem;
+      font-size: 1.3rem;
     }
 
     .links {
@@ -256,7 +249,7 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
   }
 
   a.thumbnail {
-    max-width: calc(50% - $gap / 2); // Half of the parent's size
+    max-width: calc(50%); // Half of the parent's size
     height: 100%;
     display: flex;
     justify-content: center;
