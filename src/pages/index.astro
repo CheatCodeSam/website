@@ -48,6 +48,9 @@ const projects = (await getCollection<"projects">("projects")).sort(
       <div class="page-card-list">
         {posts.slice(0, 3).map((post) => <PageCard page={post} />)}
       </div>
+      <a href="/blog"
+        >See all {posts.length} post{posts.length === 1 ? "" : "s"}</a
+      >
     </section>
 
     <section>
@@ -55,6 +58,9 @@ const projects = (await getCollection<"projects">("projects")).sort(
       <div class="page-card-list">
         {projects.slice(0, 3).map((project) => <PageCard page={project} />)}
       </div>
+      <a href="/projects"
+        >See all {projects.length} project{projects.length === 1 ? "" : "s"}</a
+      >
     </section>
   </main>
 </BasePageLayout>
@@ -88,8 +94,16 @@ const projects = (await getCollection<"projects">("projects")).sort(
   section {
     padding: 1.5rem 0;
 
-    :last-child {
-      margin-bottom: 0;
+    a {
+      display: block;
+      margin-top: 1.5rem;
+      text-decoration: none;
+      color: var(--text-color-2);
+      transition: color 200ms ease;
+
+      &:hover {
+        color: var(--link-color);
+      }
     }
   }
 
