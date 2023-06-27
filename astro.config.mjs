@@ -1,5 +1,5 @@
 import { defineConfig, sharpImageService } from 'astro/config';
-import node from "@astrojs/node";
+import netlify from "@astrojs/netlify/functions";
 import sitemap from "@astrojs/sitemap";
 import partytown from "@astrojs/partytown";
 import svelte from '@astrojs/svelte';
@@ -11,15 +11,9 @@ import { remarkReadingTime } from './remark-plugins/remark-reading-time.mjs';
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
-  adapter: node({
-    mode: "standalone"
-  }),
+  adapter: netlify(),
   site: 'https://joonaa.dev',
-  integrations: [svelte(), compress(), sitemap(), partytown({
-    config: {
-      forward: ['dataLayer.push']
-    }
-  })],
+  integrations: [svelte(), compress(), sitemap(), partytown({ config: { forward: ['dataLayer.push'] } })],
   markdown: {
     shikiConfig: {
       theme: 'github-dark',
@@ -29,7 +23,7 @@ export default defineConfig({
     rehypePlugins: [rehypeKatex]
   },
   image: {
-    service: sharpImageService()
+    service: sharpImageService(),
   },
   experimental: {
     assets: true
