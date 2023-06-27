@@ -11,7 +11,9 @@ import {
 } from "../../utils";
 
 const { slug } = Astro.params;
-const posts = await getCollection<"blog">("blog");
+const posts = (await getCollection<"blog">("blog")).sort(
+  (a, b) => a.data.id - b.data.id
+);
 const postIndex = posts.findIndex(
   ({ data }) => data.id === +slug!.split("/")[0]
 );
