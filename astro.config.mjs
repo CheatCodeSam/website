@@ -1,4 +1,4 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig, sharpImageService } from 'astro/config';
 import netlify from "@astrojs/netlify/functions";
 import sitemap from "@astrojs/sitemap";
 import partytown from "@astrojs/partytown";
@@ -7,7 +7,6 @@ import compress from "astro-compress";
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { remarkReadingTime } from './remark-plugins/remark-reading-time.mjs';
-
 
 // https://astro.build/config
 export default defineConfig({
@@ -22,6 +21,9 @@ export default defineConfig({
     },
     remarkPlugins: [remarkMath, remarkReadingTime],
     rehypePlugins: [rehypeKatex]
+  },
+  image: {
+    service: sharpImageService(),
   },
   experimental: {
     assets: true
