@@ -3,7 +3,7 @@ title: "Algorust"
 url: "https://algorust.dev"
 createdAt: 2021-10-02
 updatedAt: 2022-11-26
-description: "A website with interactive visualizations of various types of algorithms, like sorting and pathfinding algorithms. The entire projects is primarily built with Rust using the [Yew web framework](https://yew.rs)."
+description: "A website with interactive visualizations of various types of algorithms, like sorting and pathfinding algorithms. The entire project is primarily built with Rust using the [Yew web framework](https://yew.rs)."
 tags:
   - Algorithms
   - Rust
