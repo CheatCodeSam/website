@@ -6,6 +6,10 @@ This is my personal website where I share my projects and write about them or wh
 
 You can expect topics like physics simulation, algorithms, web development, game development, or whatever else I find to be interesting at a given time.
 
+## Contributing
+
+As this is my personal website, I control its content and style. However, if you spot any typos, incorrect information or bugs, feel free to open an issue or a pull request.
+
 ## Website structure
 
 This website is made with <a href="https://astro.build/">Astro</a>. It's very lightweight and performant, and its [content collections](https://docs.astro.build/en/guides/content-collections/) suit my use case quite well.
