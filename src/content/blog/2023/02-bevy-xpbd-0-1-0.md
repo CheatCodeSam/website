@@ -10,6 +10,7 @@ tags:
   - "Bevy"
 thumbnail: "@assets/bevy_xpbd_newtons_cradle.webp"
 thumbnailAlt: "Newton's cradle in Bevy XPBD"
+thumbnailOptimization: false
 links:
   -
     url: "https://github.com/Jondolf/bevy_xpbd"

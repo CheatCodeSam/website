@@ -11,6 +11,7 @@ const blog = defineCollection({
     updatedAt: z.string().or(z.date()).transform(str => new Date(str)).optional(),
     thumbnail: image().optional(),
     thumbnailAlt: z.string().optional(),
+    thumbnailOptimization: z.boolean().default(true).optional(),
     links: z.array(z.object({
       url: z.string(),
       text: z.string().optional(),
@@ -30,6 +31,7 @@ const projects = defineCollection({
     updatedAt: z.string().or(z.date()).transform(str => new Date(str)).optional(),
     thumbnail: image().optional(),
     thumbnailAlt: z.string().optional(),
+    thumbnailOptimization: z.boolean().default(true).optional(),
     links: z.array(z.object({
       url: z.string(),
       text: z.string().optional(),

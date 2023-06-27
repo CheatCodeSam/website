@@ -33,8 +33,15 @@ if (
 }
 
 const { Content, headings, remarkPluginFrontmatter } = await post.render();
-const { title, description, tags, thumbnail, thumbnailAlt, createdAt } =
-  post.data;
+const {
+  title,
+  description,
+  tags,
+  thumbnail,
+  thumbnailAlt,
+  thumbnailOptimization,
+  createdAt,
+} = post.data;
 const currUrl = new URL(Astro.request.url);
 const imgSrc = thumbnail?.src
   ? localOrRemoteSrcToUrl(currUrl, thumbnail?.src).toString()
@@ -102,9 +109,18 @@ const imgSrc = thumbnail?.src
       }
 
       {
-        thumbnail && (
-          <Image class="thumbnail" src={thumbnail} alt={thumbnailAlt || ""} />
-        )
+        thumbnail &&
+          ((thumbnailOptimization && (
+            <Image class="thumbnail" src={thumbnail} alt={thumbnailAlt || ""} />
+          )) || (
+            <img
+              class="thumbnail"
+              src={thumbnail.src}
+              alt={thumbnailAlt}
+              width={thumbnail.width}
+              height={thumbnail.height}
+            />
+          ))
       }
     </header>
 

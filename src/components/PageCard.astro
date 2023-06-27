@@ -82,10 +82,19 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
       {
         page.data.thumbnail && (
           <a class="thumbnail" href={pageUrl} title={page.data.title}>
-            <Image
-              src={page.data.thumbnail}
-              alt={page.data.thumbnailAlt || ""}
-            />
+            {(page.data.thumbnailOptimization && (
+              <Image
+                src={page.data.thumbnail}
+                alt={page.data.thumbnailAlt || ""}
+              />
+            )) || (
+              <img
+                src={page.data.thumbnail.src}
+                alt={page.data.thumbnailAlt}
+                width={page.data.thumbnail.width}
+                height={page.data.thumbnail.height}
+              />
+            )}
           </a>
         )
       }
