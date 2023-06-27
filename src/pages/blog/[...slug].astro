@@ -16,11 +16,10 @@ const postIndex = posts.findIndex(
   ({ data }) => data.id === +slug!.split("/")[0]
 );
 const [prevPost, post, nextPost] = [
-  posts[postIndex - 1],
+  postIndex > 0 ? posts[postIndex - 1] : null,
   posts[postIndex],
-  posts[postIndex + 1],
+  postIndex < posts.length - 1 ? posts[postIndex + 1] : null,
 ];
-
 if (!post) {
   return Astro.redirect("/blog/404?redirectedFrom=" + slug);
 }
