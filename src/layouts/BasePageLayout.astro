@@ -6,11 +6,18 @@ export interface Props {
   metaDescription?: string;
   metaKeywords?: string[];
   metaImageSrc?: string;
+  metaImageAlt?: string;
   canonical?: string;
 }
 
-const { title, metaDescription, metaKeywords, metaImageSrc, canonical } =
-  Astro.props;
+const {
+  title,
+  metaDescription,
+  metaKeywords,
+  metaImageSrc,
+  metaImageAlt,
+  canonical,
+} = Astro.props;
 
 const canonicalUrl =
   "https://joonaa.dev" + (canonical ? canonical : Astro.url.pathname);
@@ -69,17 +76,13 @@ const canonicalUrl =
         <meta name="keywords" content={metaKeywords?.join(", ")} />
       )
     }
-    <meta name="og:title" property="og:title" content={title} />
-    <meta
-      name="og:description"
-      property="og:description"
-      content={metaDescription}
-    />
-    {
-      metaImageSrc && (
-        <meta name="og:image" property="og:image" content={metaImageSrc} />
-      )
-    }
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Joona Aalto" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={metaDescription} />
+    {metaImageSrc && <meta property="og:image" content={metaImageSrc} />}
+    {metaImageAlt && <meta property="og:image:alt" content={metaImageAlt} />}
 
     <!-- Partytown and Google Analytics -->
     <script
