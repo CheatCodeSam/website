@@ -42,6 +42,8 @@ const projects = (await getCollection<"projects">("projects")).sort(
     </div>
   </header>
 
+  <hr />
+
   <main>
     <section>
       <h2>Recent blog posts</h2>
@@ -52,6 +54,8 @@ const projects = (await getCollection<"projects">("projects")).sort(
         >See all {posts.length} post{posts.length === 1 ? "" : "s"}</a
       >
     </section>
+
+    <hr />
 
     <section>
       <h2>Recent projects</h2>
@@ -105,6 +109,15 @@ const projects = (await getCollection<"projects">("projects")).sort(
         color: var(--link-color);
       }
     }
+  }
+
+  hr {
+    max-width: calc(50rem - 3rem);
+    width: calc(100% - 3rem);
+    height: 1px;
+    background-color: rgba(var(--text-color-2-rgb), 0.2);
+    outline: none;
+    border: none;
   }
 
   h2 {
