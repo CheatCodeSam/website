@@ -82,19 +82,22 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
       {
         page.data.thumbnail && (
           <a class="thumbnail" href={pageUrl} title={page.data.title}>
-            {(page.data.thumbnailOptimization && (
-              <Image
-                src={page.data.thumbnail}
-                alt={page.data.thumbnailAlt || ""}
-              />
-            )) || (
-              <img
-                src={page.data.thumbnail.src}
-                alt={page.data.thumbnailAlt}
-                width={page.data.thumbnail.width}
-                height={page.data.thumbnail.height}
-              />
-            )}
+            <figure>
+              {(page.data.thumbnailOptimization && (
+                <Image
+                  src={page.data.thumbnail}
+                  alt={page.data.thumbnailAlt || ""}
+                />
+              )) || (
+                <img
+                  src={page.data.thumbnail.src}
+                  alt={page.data.thumbnailAlt}
+                  width={page.data.thumbnail.width}
+                  height={page.data.thumbnail.height}
+                />
+              )}
+              <figcaption>{page.data.thumbnailAlt}</figcaption>
+            </figure>
           </a>
         )
       }
@@ -267,14 +270,24 @@ let pageUrl = page.data.url || slugToRoute(page.slug, page.collection);
     overflow: hidden;
     border-radius: $borderRadius;
 
-    :global(img) {
-      width: auto;
-      height: auto;
-      max-width: 100%;
-      max-height: 16rem;
+    figure {
       margin: 0;
       padding: 0;
-      border-radius: $borderRadius;
+
+      figcaption {
+        opacity: 0.8;
+        color: var(--text-color-2);
+      }
+
+      :global(img) {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 16rem;
+        margin: 0 0 0.5rem 0;
+        padding: 0;
+        border-radius: $borderRadius;
+      }
     }
   }
 
