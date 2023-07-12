@@ -1,0 +1,38 @@
+---
+import type { TocHeading } from "./TableOfContents.astro";
+interface Props {
+    heading: TocHeading;
+}
+const { heading } = Astro.props;
+---
+
+<li>
+    <a href={"#" + heading.slug}>
+        {heading.text}
+    </a>
+    {
+        heading.subheadings.length > 0 && (
+            <ul>
+                {heading.subheadings.map((subheading) => (
+                    <Astro.self heading={subheading} />
+                ))}
+            </ul>
+        )
+    }
+</li>
+
+<style lang="scss">
+    li a {
+        text-decoration: none;
+        color: var(--text-color-2);
+        background-color: transparent;
+        display: block;
+        border-radius: 0.4rem;
+        padding: 0.1rem 0.5rem;
+        transition: 100ms;
+
+        &:hover {
+            background-color: rgba(var(--text-color-2-rgb), 0.1);
+        }
+    }
+</style>

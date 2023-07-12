@@ -58,7 +58,7 @@ const imgSrc = thumbnail?.src
 >
   {
     headings.length > 0 && (
-      <div class="toc">
+      <div class="side-toc">
         <span class="toc-title">Table of contents</span>
         <ul>
           {headings.map((heading) => (
@@ -119,14 +119,14 @@ const imgSrc = thumbnail?.src
                 src={thumbnail}
                 alt={thumbnailAlt || ""}
               />
-          )) || (
-            <img
+            )) || (
+              <img
                 class="thumbnail-img"
-              src={thumbnail.src}
-              alt={thumbnailAlt}
-              width={thumbnail.width}
-              height={thumbnail.height}
-            />
+                src={thumbnail.src}
+                alt={thumbnailAlt}
+                width={thumbnail.width}
+                height={thumbnail.height}
+              />
             )}
             <figcaption>{thumbnailAlt}</figcaption>
           </figure>
@@ -164,7 +164,7 @@ const imgSrc = thumbnail?.src
   $articleWidth: 50rem;
   $tocItemLeftPadding: 0.5rem;
 
-  .toc {
+  .side-toc {
     position: fixed;
     left: calc((100vw - (100vw - $articleWidth) / 2 - $tocItemLeftPadding));
     top: 6rem;
@@ -323,7 +323,7 @@ const imgSrc = thumbnail?.src
   }
 
   @media only screen and (max-width: 1300px) {
-    .toc {
+    .side-toc {
       display: none;
     }
   }
