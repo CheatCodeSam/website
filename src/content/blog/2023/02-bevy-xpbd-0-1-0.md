@@ -9,7 +9,7 @@ tags:
   - "Rust"
   - "Bevy"
 thumbnail: "@assets/bevy_xpbd_newtons_cradle.webp"
-thumbnailAlt: "Newton's cradle simulated using Bevy XPBD"
+thumbnailAlt: "Newton's cradle simulated using Bevy XPBD."
 thumbnailOptimization: false
 links:
   -

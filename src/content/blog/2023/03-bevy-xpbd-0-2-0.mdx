@@ -1,0 +1,324 @@
+---
+id: 3
+title: "Bevy XPBD 0.2: Spatial queries, Bevy 0.11 and more"
+description: "Spatial queries, Bevy 0.11 support, improved scheduling, damping, gravity scale, better forces, locked axes, bug fixes..."
+createdAt: 2023-07-13
+tags:
+  - "Physics"
+  - "Simulation"
+  - "Rust"
+  - "Bevy"
+thumbnail: "@assets/ray_cast_laser_show.webp"
+thumbnailAlt: "Hundreds of rays cast at a rotating sphere, coloring the detected hits."
+thumbnailOptimization: false
+---
+import TableOfContents from "@components/TableOfContents.astro"
+
+[**Bevy XPBD**](https://github.com/Jondolf/bevy_xpbd) is a 2D and 3D physics engine for the [Bevy](https://bevyengine.org) game engine.
+
+Version 0.2 has now been released on [crates.io](https://crates.io/crates/bevy_xpbd_3d), featuring spatial queries, Bevy 0.11 support, improved scheduling and system sets, damping, gravity scale, locked axes, API improvements, and several bug fixes.
+
+If you're new here and don't know much about Bevy XPBD, consider reading the [previous post](/blog/02/bevy-xpbd-0-1-0) and taking a look at the [GitHub repository](https://github.com/Jondolf/bevy_xpbd).
+
+<TableOfContents headings={getHeadings()} />
+
+## Spatial queries
+
+**Spatial queries** are geometric queries that return information about colliders and their geometry. They are extremely common in games, as they can be used for a wide variety of use cases, like character controllers, firing bullets, getting environmental information for AI, and more.
+
+Bevy XPBD 0.2 adds support for four types of spatial queries: **ray casts**, **shape casts**, **point projection** and **intersection tests**. They can all be performed using methods provided by the `SpatialQuery` system parameter. For ray casting and shape casting, there is also a new component-based approach that aims to make simple casts as ergonomic and convenient as possible.
+
+### Ray casting
+
+**Ray casting** is a spatial query that finds intersections between colliders and a half-line. This can be used for a variety of things, like firing bullets or getting information about the environment for character controllers and AI.
+
+<img src="/blog-assets/ray_caster_example.webp" />
+
+With the component-based approach, ray casting can be done by adding the `RayCaster` component and querying for `RayHits`. The ray caster performs casts and updates the hits every frame. The ray caster's coordinates are also relative to the entity's or its parent's position, so you don't have to manually implement logic for following an entity.
+
+```rust
+use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
+
+fn setup(mut commands: Commands) {
+    // Spawn a ray caster at the center with the rays travelling right
+    commands.spawn(RayCaster::new(Vec3::ZERO, Vec3::X));
+    // ...spawn colliders and other things
+}
+
+fn print_hits(query: Query<(&RayCaster, &RayHits)>) {
+    for (ray, hits) in &query {
+        // For the faster iterator that isn't sorted, use `.iter()`
+        for hit in hits.iter_sorted() {
+            println!(
+                "Hit entity {:?} at {} with normal {}",
+                hit.entity,
+                ray.origin + ray.direction * hit.time_of_impact,
+                hit.normal,
+            );
+        }
+    }
+}
+```
+
+Using `SpatialQuery` you lose some of the convenience and the entity following, but it allows you to get the results on demand in a more controlled manner:
+
+```rust
+use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
+
+fn print_hits(spatial_query: SpatialQuery) {
+    // Cast ray and get hits
+    let hits = spatial_query.ray_hits(
+        Vec3::ZERO,                    // Origin
+        Vec3::X,                       // Direction
+        100.0,                         // Maximum time of impact (travel distance)
+        20,                            // Maximum number of hits
+        true,                          // Does the ray treat colliders as "solid"
+        SpatialQueryFilter::default(), // Query filter
+    );
+
+    // Print hits
+    for hit in hits.iter() {
+        println!("Hit: {:?}", hit);
+    }
+}
+```
+
+`cast_ray` returns the single closest hit, while `ray_hits` and `ray_hits_callback` return many hits.
+
+### Shape casting
+
+**Shape casting** or **sweep testing** is a spatial query that finds intersections between colliders and a shape that is travelling along a half-line. It is very similar to [ray casting](#ray-casting), but instead of a "point" we have an entire shape travelling along a half-line. One use case is determining how far an object can move before it hits the environment.
+
+Just like ray casting, shape casting can be done using the component-based approach using `ShapeCaster` and `ShapeHits`, or with the methods provided by `SpatialQuery`. Using the component-based approach looks like this:
+
+```rust
+use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
+
+fn setup(mut commands: Commands) {
+    // Spawn a shape caster with a ball shape at the center travelling right
+    commands.spawn(ShapeCaster::new(
+        Collider::ball(0.5), // Shape
+        Vec3::ZERO,          // Origin
+        Quat::default(),     // Shape rotation
+        Vec3::X              // Direction
+    ));
+    // ...spawn colliders and other things
+}
+
+fn print_hits(query: Query<(&ShapeCaster, &ShapeHits)>) {
+    for (shape_caster, hits) in &query {
+        for hit in hits.iter() {
+            println!("Hit entity {:?}", hit.entity);
+        }
+    }
+}
+```
+
+Using `SpatialQuery` for shape casts is almost the same as for ray casting, and you can use `cast_shape` to return the closest hit and `shape_hits` or `shape_hits_callback` to return many hits.
+
+### Point projection
+
+**Point projection** is a spatial query that projects a point on the closest collider. It returns the collider's entity, the projected point, and whether the point is inside of the collider.
+
+Point projection can be done with the `project_point` method of `SpatialQuery`.
+
+### Intersection tests
+
+**Intersection tests** are spatial queries that return the entities of colliders that are intersecting a given shape or area.
+
+There are three types of intersection tests. They are all methods of the `SpatialQuery` system parameter, and they all have callback variants that call a given callback on each intersection.
+
+- `point_intersections`: Finds all entities with a collider that contains the given point.
+- `aabb_intersections_with_aabb`: Finds all entities with an AABB that is intersecting the given AABB.
+- `shape_intersections`: Finds all entities with a collider that is intersecting the given shape.
+
+### Query filters
+
+Each spatial query can be given a `SpatialQueryFilter` to exclude some colliders from the query. Using spatial query filters looks like this:
+
+```rust
+// Simple setup example, doesn't do anything useful
+fn setup(mut commands: Commands) {
+    let object = commands.spawn(Collider::ball(0.5)).id();
+
+    // A query filter that has three collision masks and excludes the `object` entity.
+    // The collision masks can be defined using bits or by using a layer enum
+    // that derives `PhysicsLayer`.
+    let query_filter = SpatialQueryFilter::new()
+        .with_masks_from_bits(0b1011)
+        .without_entities([object]);
+
+    // Spawn a ray caster with the query filter
+    commands.spawn(RayCaster::default().with_query_filter(query_filter));
+}
+```
+
+More options like flags and a custom predicate will be added in the future.
+
+## Bevy 0.11 support
+
+Bevy XPBD 0.2 supports Bevy 0.11. The `PhysicsDebugPlugin` now uses `bevy_gizmos` instead of `bevy_prototype_debug_lines`, and the examples have been updated to use a custom FPS counter instead of `bevy_screen_diagnostics`.
+
+## Improved scheduling and system sets
+
+Scheduling options in 0.1 were quite limited. 0.2 improves scheduling by allowing a custom schedule, adding a new timestep variant and simplifying system sets.
+
+### Configurable physics schedule
+
+It can often be useful to configure when physics should be run, and when to run your systems relative to physics. This is especially necessary in contexts where you need to run physics on a server.
+
+Prior to 0.2, the physics schedule was always run in `PreUpdate`. Now you can pass any schedule to `PhysicsPlugins::new`, and the physics will run in that schedule. The default schedule is now also `PostUpdate`.
+
+```rust
+// Run physics in FixedUpdate. Can be useful for usage with servers.
+// Note: It's generally better to run in PostUpdate with PhysicsTimestep::Fixed
+fn main() {
+    App::new()
+        .add_plugins((DefaultPlugins, PhysicsPlugins::new(FixedUpdate)))
+        // ...your other plugins, systems and resources
+        .run();
+}
+```
+
+### A new timestep: `PhysicsTimestep::FixedOnce`
+
+*Implemented by @NiseVoid*
+
+To accommodate usage where physics is run in `FixedUpdate` or on a server, there is now a timestep called `PhysicsTimestep::FixedOnce`. It runs physics with a fixed timestep, but unlike `PhysicsTimestep::Fixed`, it only runs once per frame instead of trying to run many steps in order to catch up to the real time that has passed, which can lead to a "death spiral" where the simulation freezes.
+
+### Simpler system sets
+
+In 0.1, there was a `PhysicsSet` for the `PhysicsSchedule` and a `SubstepSet` for the `SubstepSchedule`. There was no way to schedule systems to run before or after physics without running them in the `PhysicsSchedule`, because the system set for the higher level schedule was the confusingly named `FixedUpdateSet`, which was private.
+
+0.2 solves this by making `PhysicsSet` the high-level system set for the given schedule, and moving the `PhysicsSchedule` dependent sets like `PhysicsSet::BroadPhase` into a new set called `PhysicsStepSet`. This hides the implementation details of the simulation loop, as users can now just schedule systems relative to `PhysicsSet::StepSimulation`.
+
+`PhysicsSet` is now much simpler:
+
+```rust
+pub enum PhysicsSet {
+    Prepare,
+    StepSimulation,
+    Sync,
+}
+```
+
+## Damping
+
+Bevy XPBD now has the `LinearDamping` and `AngularDamping` components for automatically slowing down dynamic bodies. This can be used to simulate effects like air resistance. Damping is entirely optional and not applied by default.
+
+## Gravity scale
+
+The `GravityScale` component can be used to control the strength of gravity for a specific entity. A gravity scale of 2 doubles the gravity, while 0 disables it and -1 inverts it. This can be useful when you want to implement your own gravity for specific entities, or if you just want some objects to float more.
+
+## Better force API
+
+Previously, `ExternalForce` and `ExternalTorque` were just tuple structs with one value that persisted across frames. There was no convenient way to apply forces or torques for just one frame, or to apply a force at some specific point.
+
+Bevy XPBD 0.2 addresses this by adding a `persistence` property for the components, and by adding several methods like `set_force`, `apply_force`, `apply_force_at_point` and `clear`. Applying a force at a point also applies a torque.
+
+The new API for `ExternalForce` looks like this:
+
+```rust
+use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
+
+fn setup(mut commands: Commands) {
+    // Apply a force every physics frame.
+    commands.spawn((RigidBody::Dynamic, ExternalForce::new(Vec3::Y)));
+
+    // Apply an initial force and automatically clear it every physics frame.
+    commands.spawn((
+        RigidBody::Dynamic,
+        ExternalForce::new(Vec3::Y).with_persistence(false),
+    ));
+
+    // Apply multiple forces.
+    let mut force = ExternalForce::default();
+    force.apply_force(Vec3::Y).apply_force(Vec3::X);
+    commands.spawn((RigidBody::Dynamic, force));
+
+    // Apply a force at a specific point relative to the given center of mass, also applying a torque.
+    // In this case, the torque would cause the body to rotate counterclockwise.
+    let mut force = ExternalForce::default();
+    force.apply_force_at_point(Vec3::Y, Vec3::X, Vec3::ZERO);
+    commands.spawn((RigidBody::Dynamic, force));
+}
+```
+
+The API for `ExternalTorque` is similar.
+
+## Locked axes
+
+It can often be useful to prevent the movement of bodies along certain axes. For example, 3D character controllers should generally only rotate around the $y$ axis.
+
+Bevy XPBD 0.2 adds a `LockedAxes` component for locking specific translational and rotational axes.
+
+```rust
+use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
+
+fn spawn(mut commands: Commands) {
+    // Spawn a capsule that only rotates around the Y axis
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::capsule(1.0, 0.5),
+        // In 2D, use LockedAxes::new().lock_rotation()
+        LockedAxes::new().lock_rotation_x().lock_rotation_z(),
+    ));
+}
+```
+
+This makes implementing dynamic body character controllers possible, as the player will no longer fall over if rotation around the $x$ and $z$ axes is locked:
+
+<img src="/blog-assets/basic_dynamic_character_controller.webp" />
+
+## What's next?
+
+As I mentioned in the previous post, I will unfortunately have to take a long break from active development due to school. **I am not abandoning the project**, but I will not be able to add many new features or improvements until around the end of March next year when I should be free to work actively again.
+
+However, I will try my best to do basic maintenance, responding to issues and reviewing pull requests. So if you want some feature to be added or a bug to be fixed, consider opening an issue or making a pull request in the project's [GitHub repository](https://github.com/Jondolf/bevy_xpbd), and feel free to ask for help on the [Bevy Discord server](https://discord.com/invite/gMUk5Ph).
+
+Here are some features and improvements that should be implemented in the future:
+
+- Joint motors
+- Continuous collision detection (CCD)
+- Multiple colliders per body and colliders as children
+- Collision filters, i.e. excluding certain entities or rigid body types
+- Debug render colliders, joints and ray casts
+- Soft body simulation (cloth and deformable solids)
+- More flexible constraint API
+- Performance optimization (better broad phase, parallel constraint solver)
+- Seperate narrow phase from penetration constraint solver (doing this increases the explosiveness of collisions, requires investigation)
+- Fix occasional collision drifting with dynamic bodies
+
+For 0.2, I want to especially thank @NiseVoid who originally suggested many of the features you see in this post, and helped me track down *a ton* of bugs. Without the help, spatial queries would probably be a buggy mess, and there would've been a lot less features.
+
+It's incredible how fast Bevy XPBD has grown, and we have already reached nearly 340 stars on GitHub just under four weeks after the release of 0.1. I will try my best to maintain the project as well as I can, and I'm looking forward to next year when I can be a lot more active again.
+
+## Other changes
+
+- Added [`ray_caster` 2D example](https://github.com/Jondolf/bevy_xpbd/blob/main/crates/bevy_xpbd_2d/examples/ray_caster.rs)
+- Added [`basic_dynamic_character`](https://github.com/Jondolf/bevy_xpbd/blob/main/crates/bevy_xpbd_3d/examples/basic_dynamic_character.rs) and [`basic_kinematic_character`](https://github.com/Jondolf/bevy_xpbd/blob/main/crates/bevy_xpbd_3d/examples/basic_kinematic_character.rs) 3D examples
+- Added runtime warning for dynamic rigid bodies without mass or inertia to avoid common problems with NaN values
+- Renamed `CollisionLayers` methods like `with_group` and `without_mask` to `add_group` and `remove_mask` for clarity and to align better with Bevy's naming conventions
+- Removed `simd` from default features to avoid problems on WASM with `enhanced-determinism` enabled.
+- Removed `bevy_render` from Bevy's default features and added the `collider-from-mesh` feature. Bevy XPBD can now compile without any of Bevy's default features, allowing it to be used in headless contexts.
+- Removed `math`, `PhysicsSchedule`, `SubstepSchedule`, and `SubstepSet` from the prelude to make it more clear that they generally don't need to be used directly.
+- Implemented `Debug` for `Collider` (@DanielHZhang)
+- Improved documentation
+    - Added short section on server usage
+    - Added comparison to Rapier in FAQ
+    - Improved XPBD explanation a bit
+    - Various other small improvements
+
+## Bug fixes
+
+- Fixed broad phase AABB interval updates missing component removals (reported by @Gui-Yom)
+- Fixed bug where AABBs of off-center colliders weren't in the correct position (reported by @NiseVoid)
+- Fixed issue where the $z$ coordinate of bodies was being set to 0 in 2D, which messed up render ordering (reported by @NoahS)
+- Fixed oversight where contacts with `PhysicsDebugPlugin` were practically invisible in 2D due to using the same values as 3D while 2D coordinates use pixels (reported by @RJ)
+- Fixed 2D issue where the `Rotation` component was converted into `Quat` incorrectly, leading to some off-center meshes (reported by @RJ, fixed by @BrandonReinhart)
+- Probably a lot more :P
