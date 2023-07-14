@@ -60,7 +60,7 @@ function buildToc(headings: MarkdownHeading[]): TocHeading[] {
             color: var(--text-color-1);
         }
     }
-    :global(ul > li > ul) {
+    :global(.toc ul > li > ul) {
         display: flex;
         flex-direction: column;
         gap: 0.1rem;
