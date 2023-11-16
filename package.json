@@ -26,7 +26,7 @@
     "remark-math": "^5.1.1",
     "remark-parse": "^10.0.1",
     "remark-rehype": "^10.1.0",
-    "sharp": "^0.32.1",
+    "sharp": "^0.32.6",
     "svelte": "^3.55.1",
     "unified": "^10.1.2"
   },
