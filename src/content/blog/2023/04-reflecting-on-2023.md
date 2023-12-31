@@ -56,7 +56,7 @@ Still, 0.3 was an amazing release, and I'm proud of what I accomplished. This ti
 
 One of the biggest missing pieces preventing the adoption of an official physics engine for Bevy is that we don't have a [Glam](https://github.com/bitshifter/glam-rs)-based collision detection library.
 
-The only viable collísion detection crate in the Rust ecosystem is [Dimforge](https://dimforge.com/)'s [Parry](https://parry.rs/), which uses the [Nalgebra](https://nalgebra.org/) math library. Bevy doesn't want duplicate math dependencies because it's (1) confusing for users to have APIs that use different math types, and (2) just an extra dependency that takes space and increases compile times. In addition, Parry has several weird and longstanding bugs that still haven't been fixed, and the project's activity is quite low.
+The only viable collision detection crate in the Rust ecosystem is [Dimforge](https://dimforge.com/)'s [Parry](https://parry.rs/), which uses the [Nalgebra](https://nalgebra.org/) math library. Bevy doesn't want duplicate math dependencies because it's (1) confusing for users to have APIs that use different math types, and (2) just an extra dependency that takes space and increases compile times. In addition, Parry has several weird and longstanding bugs that still haven't been fixed, and the project's activity is quite low.
 
 My long-term goal is to fix this with a custom collision detection library that uses Glam and integrates well into Bevy. Ideally, the colliders could use the same shapes that are used elsewhere in the engine for e.g. primitive meshes.
 
