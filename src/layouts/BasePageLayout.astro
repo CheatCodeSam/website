@@ -87,7 +87,8 @@ const canonicalUrl =
     <!-- Partytown and Google Analytics -->
     <script
       type="text/partytown"
-      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"></script>
+      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"
+    ></script>
     <script type="text/partytown">
       window.dataLayer = window.dataLayer || [];
       function gtag() {
@@ -160,8 +161,14 @@ const canonicalUrl =
       }
 
       p,
-      ul {
+      ul,
+      ol {
         line-height: 1.7em;
+      }
+
+      ul li,
+      ol li {
+        padding: 0.2rem 0;
       }
 
       a {
