@@ -9,6 +9,7 @@ import {
   localOrRemoteSrcToUrl,
   slugToRoute,
 } from "../../utils";
+import Markdown from "@components/Markdown.svelte";
 
 const { slug } = Astro.params;
 const posts = (await getCollection<"blog">("blog")).sort(
@@ -96,7 +97,13 @@ const imgSrc = thumbnail?.src
 
       <h1 class="title">{title}</h1>
 
-      {description && <p class="description">{description}</p>}
+      {
+        description && (
+          <div class="description">
+            <Markdown markdown={description} />
+          </div>
+        )
+      }
 
       {
         tags && (
@@ -277,7 +284,7 @@ const imgSrc = thumbnail?.src
       }
     }
 
-    p.description {
+    .description {
       font-size: 1.1em;
       color: var(--text-color-2);
       padding: 0;
