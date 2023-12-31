@@ -5,8 +5,6 @@ description: "2023 has been a busy year. Let's `Reflect`!"
 createdAt: 2023-12-31
 ---
 
-Happy New Year!
-
 2023 has been an incredible but very busy year for me. Balancing school, free time, and a rapidly growing programming project has been a challenge that I'm still struggling with, but it has certainly helped me grow as both a developer and a person.
 
 Now, as the year is coming to a close, I thought I'd reflect a bit to see what I've achieved and learned, and what the future holds.
