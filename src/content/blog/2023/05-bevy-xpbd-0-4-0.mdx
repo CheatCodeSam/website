@@ -1,0 +1,319 @@
+---
+id: 5
+title: "Bevy XPBD 0.4: Collider Agnosticism, Layer Rework, and Bevy 0.13"
+description: "The 0.4 version of Bevy XPBD has been released!"
+createdAt: 2023-07-13
+tags:
+  - "Physics"
+  - "Simulation"
+  - "Rust"
+  - "Bevy"
+thumbnail: "@assets/generic_colliders.webp"
+thumbnailAlt: "An example of a basic fully custom collision backend supporting circle collisions."
+thumbnailOptimization: false
+---
+import TableOfContents from "@components/TableOfContents.astro"
+
+**[Bevy XPBD](https://github.com/Jondolf/bevy_xpbd)** is an ECS-based 2D and 3D physics engine for the [Bevy](https://bevyengine.org/) game engine. You can check out the [GitHub repository](https://github.com/Jondolf/bevy_xpbd) and the [introductory post](https://joonaa.dev/blog/02/bevy-xpbd-0-1-0) for more details.
+
+> **Note**: Version 0.3 didn't get its own blog post, but you can find the release notes and changelog [here](https://github.com/Jondolf/bevy_xpbd/releases/tag/v0.3.0).
+
+**Bevy XPBD 0.4** has now been released on [crates.io](https://crates.io/crates/bevy_xpbd_3d), featuring several new features, bug fixes,
+and quality of life improvements. Here are some highlights:
+
+- **Generic colliders**: Bevy XPBD no longer relies on just `Collider` for collision detection. You can implement custom collision backends!
+- **Parry and Nalgebra are optional**: The Parry and Nalgebra dependencies are now behind feature flags (enabled by default). If you don't need collision detection or have a custom collision backend, you can disable them!
+- **Access contact impulses**: It is often useful to know how strong collisions are. This information is now available in `Collision` events and the `Collisions` resource.
+- **Debug render contacts**: Contact normals and impulses can now be debug rendered.
+- **Layer rework**: Collision layers have been reworked to be more versatile and explicit with less footguns.
+- **[Bevy 0.13](https://bevyengine.org/news/bevy-0-13/) support**: Bevy XPBD has been updated to the latest version of Bevy.
+- **Colliders from primitives**: Colliders can be created from the new [geometric primitives](https://bevyengine.org/news/bevy-0-13/#primitive-shapes) introduced in Bevy 0.13.
+- **`PhysicsGizmos` gizmo config group**: Debug rendering has its own gizmo configuration instead of using the global configuration.
+
+The migration guide and a more complete changelog can be found on [GitHub](https://github.com/Jondolf/bevy_xpbd/releases/tag/v0.4.0).
+
+## Generic Colliders
+
+In previous versions, collider-specific backend logic was split across several plugins. The `PreparePlugin` initialized colliders and managed mass properties and collider parents, the `SyncPlugin` handled collider scale and transform propagation, and the `BroadPhasePlugin` updated their AABBs. This coupled "collider logic" with "rigid body logic" and made it very difficult to implement custom collision backends without having to rewrite a large chunk of the engine.
+
+**Bevy XPBD 0.4** moves this logic into a generic `ColliderBackendPlugin`. It handles all of the collider setup and updates for any type that implements the `AnyCollider` and (for now) `ScalableCollider` traits. The narrow phase has also been refactored to be generic over the collider type.
+
+It is now very straightforward to implement completely custom collider backends. After implementing the traits, you simply need to add the `ColliderBackendPlugin` and `NarrowPhasePlugin`:
+
+```rust
+app.add_plugins((
+    DefaultPlugins,
+    PhysicsPlugins::default(),
+    ColliderBackendPlugin::<MyCollider>::default(),
+    NarrowPhasePlugin::<MyCollider>::default(),
+));
+```
+
+This will also make experimentation with changing the built-in collision backend from Parry to something else much easier. Note that spatial queries are still reliant on `Collider` however.
+
+Below is the video you saw as the cover of this post. It is the [`custom_collider`](https://github.com/Jondolf/bevy_xpbd/blob/36e0d82af4cd0b86e2de8ff1b33c87dd7028e76f/crates/bevy_xpbd_2d/examples/custom_collider.rs) example, using only a custom-made `CircleCollider` and zero Parry!
+
+<img alt="Circle colliders colliding with a rotating object" src="/blog-assets/generic_colliders.webp" />
+
+Some new sets like the `BroadPhaseSet`, `NarrowPhaseSet`, and `SyncSet` system sets have also been introduced as a part of the refactor to make internal system ordering cleaner.
+
+## Parry and Nalgebra Are Optional
+
+**Bevy XPBD** currently uses [Parry](https://parry.rs/) for collision detection. It uses [Nalgebra](https://nalgebra.org/) for math unlike Bevy which uses [Glam](https://github.com/bitshifter/glam-rs). For an official physics integration some day in the future, Bevy doesn't want duplicate math libraries in its dependency tree.
+
+Generic colliders paved the way for collider agnosticism, but it doesn't get rid of Parry or Nalgebra if `Collider` still exists. To address this, **Bevy XPBD 0.4** adds three new feature flags: `default-collider`, `parry-f32`, and `parry-f64`, for the `f32` and `f64` versions of Parry respectively.
+
+By default, the `f32` version of `Collider` is enabled, but by disabling default features, you can get rid of Parry and Nalgebra completely.
+
+```toml
+[dependencies]
+# This has no default `Collider`, Parry, or Nalgebra
+bevy_xpbd_3d = { version = "0.4", default-features = false, features = ["3d", "f32"] }
+```
+
+This helps reduce binary size and complexity for projects that don't need collision detection or have a custom collision backend.
+
+## Access Contact Impulses
+
+Having access to contact impulses can be very useful for several tasks, like implementing destructable objects or determining how much damage a hit should deal. This is now exposed in `ContactData` accessed from `Collision` events or the `Collisions` resource.
+
+Impulses are stored instead of forces for a few reasons:
+
+- It's more efficient internally, as it skips some operations.
+- Impulses might make more sense for impacts.
+- It's what Box2D, Unity, and many other engines use.
+
+Computing the corresponding force is simple however, as you just need to divide by the (substep) delta time. For this, the contact types also have helpers like `normal_force` and `tangent_force`.
+
+Note that impulses in `Collision` events are currently *only from the last substep*.
+
+## Debug Render Contacts
+
+Previously, only contact points could be debug rendered. Now, it is also supported for contact normals, which by default vary in length based on the impulse magnitude.
+
+<video alt="Debug rendering contacts" autoplay controls>
+    <source src="/blog-assets/contact_debug_rendering.mp4" type="video/mp4" />
+</video>
+
+## Layer Rework
+
+Before **Bevy XPBD 0.4**, `CollisionLayers` had "groups" and "masks". Groups indicated which layers a collider is a part of, and masks indicated which layers a collider can interact with.
+
+However, both groups and masks are *bitmasks*, so the "masks" name is a bit ambiguous. In addition, "groups" and "layers" sound almost synonymous, but masks also use layers (a layer corresponds to one bit). `CollisionLayers` also had tons of API duplication with methods like `add_group`, `add_groups`, `add_mask`, `add_masks`, and so on.
+
+**Bevy XPBD 0.4** reduces this duplication and ambiguity by reworking layers in three major ways:
+
+- Groups are now called **memberships** and masks are called **filters**. This also matches Rapier's naming.
+- Memberships and filters use a type called `LayerMask`, which is a bitmask for layers and a newtype for `u32`.
+- All methods like `add_group`, `remove_mask`, and so on have been removed. Instead, modify the properties directly.
+
+`LayerMask`s are versatile: you can create them from bitmasks, enums that implement `PhysicsLayer`, or even arrays of layers. `CollisionLayers` constructors now take `impl Into<LayerMask>`, so you can use whatever approach you prefer:
+
+```rust
+let layers1 = CollisionLayers::new(0b00010, 0b0111);
+let layers2 = CollisionLayers::new(GameLayer::Player, [GameLayer::Enemy, GameLayer::Ground]);
+let layers3 = CollisionLayers::new(LayerMask(0b0001), LayerMask::ALL);
+```
+
+Modifying layers is now done by modifying the memberships or filters directly:
+
+```rust
+layers.memberships.remove(GameLayer::Environment);
+layers.filters.add([GameLayer::Environment, GameLayer::Tree]);
+
+// Bitwise ops also work since we're accessing the bitmasks/layermasks directly.
+layers.memberships |= GameLayer::Player; // You could also use a bitmask like 0b0010.
+```
+
+The methods mutate in-place, which fixes the footgun where the old methods like `add_group` [looked like they were in-place](https://github.com/Jondolf/bevy_xpbd/issues/322) when in reality they were not.
+
+## Bevy 0.13 Support
+
+**Bevy XPBD 0.4** supports the latest version of Bevy. [0.13](https://bevyengine.org/news/bevy-0-13/) contains lots of additions that are highly useful for physics and collision detection, and several of these are already in use in Bevy XPBD.
+
+### Colliders from Primitives
+
+Bevy 0.13 added support for first-party geometric primitives. **Bevy XPBD 0.4** supports creating colliders from most of them using the new `IntoCollider` trait.
+
+```rust
+// Both work
+let circle = Circle::new(0.5).collider();
+let circle = Collider::from(Circle::new(0.5);
+```
+
+All primitives support collider creation, except for `ConicalFrustum` and `Torus`, which will get support in a future release. Some new collider shapes are also supported in 2D: `Ellipse` and `RegularPolygon`.
+
+```rust
+// Both work
+let ellipse = Collider::ellipse(1.0, 0.5);
+let ellipse = Collider::from(Ellipse::new(1.0, 0.5));
+
+// Both work
+let hexagon = Collider::regular_polygon(0.5, 6);
+let hexagon = Collider::from(RegularPolygon::new(0.5, 6));
+```
+
+To align better with Bevy's naming, the `ball` constructor is now `circle` in 2D and `sphere` in 3D, while `cuboid` is `rectangle` in 2D and remains as `cuboid` in 3D.
+
+### Direction Types for Spatial Queries
+
+Bevy 0.13 added the `Direction2d` and `Direction3d` types to provide a type-level guarantee that unit vectors remain normalized. These are used in several Bevy APIs already, like the new `Ray2d` and `Ray3d` types.
+
+**Bevy XPBD 0.4** changes spatial query APIs to use the new direction types. This is more explicit, and it guarantees that the input and output are expected; previously, you could use unnormalized direction vectors, which were actually treated as a kind of velocity, affecting the time of impact. This could often be unexpected for users.
+
+```rust
+// Before
+let caster = RayCaster::new(Vec3::ZERO, Vec3::X);
+
+// After
+let caster = RayCaster::new(Vec3::ZERO, Direction3d::X);
+```
+
+This applies to `RayCaster`, `ShapeCaster`, `SpatialQuery` methods like `cast_ray`, and many other methods that use directions.
+
+You can also create `RayCaster`s from Bevy's new ray types:
+
+```rust
+// `RayCaster::from` also works
+let caster = RayCaster::from_ray(Ray3d::new(Vec3::ZERO, Vec3::X));
+```
+
+In the future, we will most likely also start using Bevy's `Ray2d` and `Ray3d` types in more APIs. It was left out for now, because it'd require some larger API changes and have several design questions, and it might not work as well for `f64` precision.
+
+### `PhysicsGizmos` Gizmo Config Group
+
+The `PhysicsDebugConfig` resource and `PhysicsDebugRenderer` system parameter have been removed in favor of the new `PhysicsGizmos` [gizmo configuration group](https://bevyengine.org/news/bevy-0-13/#multiple-gizmo-configurations). With this change, the gizmo configuration of Bevy XPBD is finally separate from the global configuration, so third party plugins and custom configurations won't unexpectedly impact physics debug rendering.
+
+Before:
+
+```rust
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            PhysicsPlugins::default(),
+            PhysicsDebugPlugin::default(),
+        ))
+        // Configure physics debug rendering
+        .insert_resource(PhysicsDebugConfig {
+            aabb_color: Some(Color::WHITE),
+            ..default()
+        })
+        .run();
+}
+```
+
+After:
+
+```rust
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            PhysicsPlugins::default(),
+            PhysicsDebugPlugin::default(),
+        ))
+        // Configure physics debug rendering
+        .insert_gizmo_group(
+            PhysicsGizmos {
+                aabb_color: Some(Color::WHITE),
+                ..default()
+            },
+            GizmoConfig::default(),
+        )
+        .run();
+}
+```
+
+## What's Next?
+
+I have a lot of experiments and exciting plans for physics in Bevy. I recently gave [a talk](https://www.youtube.com/live/i3wF71XJ-24?si=qoj2I9bxlT7b6ClP&t=6913) where I touched on the topic in the first ever (unofficial) Bevy game dev meetup; go check it out along with everyone else's amazing talks!
+
+(And excuse my poor microphone; this was also my first ever talk like this so I had zero experience)
+
+Now, let's dive into some of my experiments and plans in a bit more detail. I might end up writing dedicated blog posts for these later on if the results end up being interesting enough.
+
+### Glam-Based Collision Experiments
+
+Currently, both `bevy_rapier` and `bevy_xpbd` use [Parry](https://parry.rs) for collision detection. As I briefly mentioned earlier, Parry uses [Nalgebra](https://nalgebra.rs) instead of [Glam](https://github.com/bitshifter/glam-rs), and Bevy doesn't really want duplicate math libraries because it'd be confusing, add complexity, and increase binary size and compile times. Bevy wants Glam-based collision detection.
+
+I see two paths for this:
+
+1. Fork Parry to make a version that supports Glam.
+2. Build a collision detection library from scratch.
+
+These are quite massive endeavours, especially the latter one. However, I think they're both valuable in their own ways, so I have started experimenting with both approaches.
+
+My Parry fork is currently called [Barry](https://github.com/Jondolf/barry) (Bevy + Parry), and I have already managed to completely replace Nalgebra with `bevy_math`, which uses Glam. The next step is to fix bugs introduced in the process and to continue making it feel more native by using Bevy's built-in primitive shapes and bounding volumes.
+
+Note that `bevy_math` does *not* depend on Bevy itself, so Barry would still be a general-purpose collision detection library that the whole Rust ecosystem could use, just like Parry. It's very much a work in progress, but it looks promising!
+
+My completely custom collision detection library on the other hand is called `bevy_peck` (because birds hit things with their beaks by pecking). It's in extremely early stages, but I'm close to having working GJK and EPA implemented, which would provide the core foundation for collision detection.
+
+Even if `bevy_peck` doesn't become a complete and usable library, it is at least a great learning opportunity for me, and a way to freely experiment with different APIs and approaches. As I add more functionality like ray casting and point queries for primitive shapes, we could also consider upstreaming them into Bevy itself. Doing this piece by piece might be a better approach than eventually upstreaming an entire collision detection library all at once.
+
+### Solver Experiments
+
+**Extended Position-Based Dynamics**, or **XPBD** for short, is a great simulation method with generally good stability. It has worked great for Bevy XPBD, but it does have its flaws.
+
+- Overlap is solved by pushing bodies apart at a position-level. This makes cases where bodies are constantly overlapping (like squished in a confined box) very energetic and potentially explosive.
+- Position-based constraints can often have high-frequency oscillation where bodies are always slightly moving back-and-forth. This typically isn't very clearly visible, but looking up close, it can be noticeable in some instances. XPBD rarely (if ever) reaches a completely stable and relaxed state without sleeping.
+- The IP status of XPBD isn't perfectly clear, as parts of it are technically patented by NVIDIA. There are many existing open source implementations however, including one from the authors of XPBD. Still, Bevy would prefer something with a clearer status.
+
+Erin Catto, the author of the incredible [Box2D](https://box2d.org/) physics engine and a legend in the physics simulation scene, recently made a project called [Solver2D](https://github.com/erincatto/solver2d) to compare different solvers and their unique characteristics. His [video](https://www.youtube.com/embed/sKHf_o_UCzI?si=6XvA4C7scqyWQ0iM) shows the results, and the [article](https://box2d.org/posts/2024/02/solver2d/) goes into more detail on the actual implementations.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/sKHf_o_UCzI?si=6XvA4C7scqyWQ0iM" title="Erin Catto's Solver2D results" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen class="yt-video"></iframe>
+
+Erin found that a solver that he calls "**TGS Soft**" consistently performs the best, and it is likely to be used for Box2D v3.0. TGS Soft is an impulse-based solver that uses XPBD-like **substepping** combined with **soft constraints**, which apply intuitive spring-like damping to constraint responses. This solver is also extremely close if not identical to the solver that [Rapier recently switched to](https://github.com/dimforge/rapier/pull/579), with great success.
+
+I have started experimenting with a TGS Soft solver of my own, and am quite close to having it working properly. I will experiment with it more and compare against XPBD myself, and if the results have TGS Soft as the winner, we might end up switching solvers. It would probably require a rebrand though :P
+
+Ultimately, the ideal approach would be to be solver-agnostic so that you could simply switch the solver by changing a plugin. XPBD might also still be great for things like cloth and soft bodies, so it could be worth keeping it around even if we use another approach for contacts.
+
+### Performance Optimization
+
+Let's face it: Bevy XPBD is not performant enough. It can do quite well when entities are relatively sparse and not constantly colliding, but as soon as you have even a thousand bodies consistently in contact, the simulation can become sluggish.
+
+There are currently several potential bottlenecks causing this. Here is a relatively comprehensive list, in no particular order in terms of significance:
+
+- The broad phase algorithm is very basic, just a single-axis sweep and prune.
+- The narrow phase is run at every substep, because positions can change at every substep, which could introduce new collisions.
+- The collision detection logic has quite a lot of allocations that shouldn't be necessary.
+- The solver isn't multi-threaded, and there are no [simulation islands](https://box2d.org/posts/2023/10/simulation-islands/).
+- Sleeping is a bit buggy and not very robust.
+- Systems have to unnecessarily iterate over static rigid bodies, because `Static` is a `RigidBody` enum variant, not its own component. However, Bevy has a [draft PR](https://github.com/bevyengine/bevy/pull/11864) for a built-in `Static` component that we could eventually use, or we could just add our own.
+- SIMD isn't utilized much.
+- Parry has a lot of dynamic dispatch. I doubt this is a significant performance issue, but it might add some overhead.
+- The bounding volume hierarchy used for spatial queries needs to be completely rebuilt every frame because of [a bug in Parry](https://github.com/dimforge/parry/issues/146).
+- Transform propagation is run an excessive amount, even iterating over non-physics entities, to account for collider hierarchies and keep everything in sync.
+- According to Tracy performance traces from a while ago, `get_many`/`get_many_mut` seem to be relatively expensive since they're called so much.
+
+This is a lot, but I believe most of the issues should definitely be resolvable.
+
+Firstly, implementing a better broad phase and moving the narrow phase out of the substepping loop could give a very significant performance boost. Especially narrow phase collision detection can be very expensive, and running it at every substep is unreasonable.
+
+One challenge with having the narrow phase outside of the substepping loop is that we could have more tunneling issues (fast-moving bodies go through objects), which is typically counteracted with *Continuous Collision Detection*. CCD is also another heavily requested feature, so it might be time to finally try and implement it.
+
+*Simulation islands* could also provide a very meaningful performance improvement, especially for larger game worlds. I haven't tried how this would work in an ECS context yet, but I imagine it's possible, and it's just something that we'll have to try.
+
+### Conclusion
+
+While we will still be adding new features like various improvements to joints and maybe more options for collision filtering, I believe it's time to start focusing a bit more on improving the core foundational pieces of Bevy XPBD rather than continuing to pile on more and more features.
+
+To summarize, we need:
+
+- Continuous Collision Detection (CCD)
+- Narrow phase collision detection outside of the substepping loop
+- A better broad phase
+- Simulation islands
+- Glam-based collision detection
+- Alternative solvers
+- A lot more tests, examples, and benchmarks to make sure the changes we make aren't arbitrary.
+
+In the short term, implementing CCD and attempting to move the narrow phase outside of the substepping loop will most likely be my top priorities, as they are somewhat related and could have a significant impact. In the background, I will also be slowly building Glam-based collision detection and experimenting with alternative solvers, primarily TGS soft. For the solver experiments, it will also be very important to develop better examples like the samples in Erin Catto's Solver2D.
+
+However, I am a human, and unfortunately have some responsibilities that I need to take care of first. Starting today, I am taking a step back from active development for about a month to focus on school. I'll be back in full force at the end of March though, and from that point onwards, I should be free to work actively on Bevy and physics for quite a long time.
+
+Huge thanks again to everyone for all of the support! Somehow, Bevy XPBD has reached 840 stars already, and even its [#crate-help](https://discord.com/channels/691052431525675048/1124043933886976171) topic on the Bevy Discord has surpassed 10,000 message (a rather arbitrary milestone that somehow feels meaningful). These numbers are crazy to me considering we're only at version 0.4.
+
+For now, I'll be focusing on studies for a bit, but I look forward to returning to all of these cool experiments and active maintenance as soon as I can.
