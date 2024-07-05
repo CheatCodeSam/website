@@ -1,6 +1,6 @@
 # Personal website [joonaa.dev](https://joonaa.dev)
 
-Hi! I'm Joona Aalto (Jondolf on GitHub), a Finnish high school student who is interested in science and programming.
+Hi! I'm Joona Aalto (Jondolf on GitHub), a Finnish university student who is interested in science and programming.
 
 This is my personal website where I share my projects and write about them or whatever else interests me. I like to dive deep into different topics to learn as much as I can, and I plan on making small devlogs or tutorials whenever I have built something interesting based on my research.
 
@@ -12,7 +12,7 @@ As this is my personal website, I control its content and style. However, if you
 
 ## Website structure
 
-This website is made with <a href="https://astro.build/">Astro</a>. It's very lightweight and performant, and its [content collections](https://docs.astro.build/en/guides/content-collections/) suit my use case quite well.
+This website is made with [Astro](https://astro.build/). It's very lightweight and performant, and its [content collections](https://docs.astro.build/en/guides/content-collections/) suit my use case quite well.
 
 ## Local development
 
