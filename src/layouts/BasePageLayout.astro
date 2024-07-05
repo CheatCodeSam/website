@@ -175,6 +175,41 @@ const canonicalUrl =
         color: var(--link-color);
       }
 
+      details {
+        background-color: var(--bg-2);
+        box-sizing: border-box;
+        border-radius: 0.6rem;
+
+        &[open] {
+          padding-bottom: 1rem;
+        }
+
+        > summary {
+          cursor: pointer;
+          user-select: none;
+          font-weight: bold;
+          padding: 1rem;
+        }
+
+        & > :not(summary):first-of-type {
+          margin-top: 0;
+        }
+
+        :last-child{
+          margin-bottom: 0rem;
+        }
+
+        > *:not(summary) {
+          margin-left: 1rem;
+          margin-right: 1rem;
+          max-width: calc(100% - 2rem);
+        }
+
+        img {
+          height: auto;
+        }
+      }
+
       code {
         font-family: monospace;
         font-size: 1.2em;

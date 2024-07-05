@@ -173,10 +173,13 @@ const imgSrc = thumbnail?.src
 
   .side-toc {
     position: fixed;
-    left: calc((100vw - (100vw - $articleWidth) / 2 - $tocItemLeftPadding));
     top: 6rem;
     right: 1.5rem;
+    bottom: 0;
+    left: calc((100vw - (100vw - $articleWidth) / 2 - $tocItemLeftPadding));
     max-width: 25rem;
+    display: flex;
+    flex-direction: column;
 
     .toc-title {
       display: block;
@@ -188,12 +191,18 @@ const imgSrc = thumbnail?.src
     }
 
     ul {
+      flex-grow: 1;
+      overflow: auto;
       display: flex;
       flex-direction: column;
-      gap: 0.2rem;
       padding: 0;
       margin: 0;
       list-style: none;
+
+      li {
+        padding-top: 0;
+        padding-bottom: 0;
+      }
 
       a {
         text-decoration: none;
@@ -204,6 +213,7 @@ const imgSrc = thumbnail?.src
         border-radius: 0.4rem;
         padding: 0.2rem $tocItemLeftPadding;
         transition: 100ms;
+        font-size: 0.9em;
 
         &:hover {
           opacity: 1;
@@ -240,7 +250,7 @@ const imgSrc = thumbnail?.src
       color: var(--text-color-2);
     }
 
-    :last-child {
+    main > :last-child {
       margin-bottom: 0;
     }
 
@@ -293,10 +303,11 @@ const imgSrc = thumbnail?.src
 
     blockquote {
       margin-left: 0;
-      padding-left: 1.5rem;
+      padding-left: 1.0rem;
+      color: var(--text-color-2);
       border-left: 3px solid var(--accent-2);
       
-      p:first-child{
+      p:first-child {
         margin-top: 0;
       }
     }
@@ -307,7 +318,7 @@ const imgSrc = thumbnail?.src
       border-radius: 0.5rem;
     }
 
-    video, .yt-video{
+    video, .yt-video {
       display: block;
       width: 100%;
       height: auto;
