@@ -1,0 +1,848 @@
+---
+id: 6
+title: "Introducing Avian Physics 0.1"
+description: "The next evolution of ECS-driven physics for Bevy"
+createdAt: 2024-07-06
+tags:
+  - "Physics"
+  - "Simulation"
+  - "Rust"
+  - "Bevy"
+thumbnail: "@assets/avian_logo.png"
+thumbnailOptimization: true
+---
+import TableOfContents from "@components/TableOfContents.astro"
+
+I am happy to announce that **Avian Physics 0.1** has been released!
+
+**Avian** is an ECS-based 2D and 3D physics engine for [Bevy](https://bevyengine.org/), a refreshingly simple data-driven game engine built in Rust. Avian prioritizes ergonomics and modularity, with a focus on providing a native ECS-driven user experience.
+
+It is the next evolution of my previous physics engine [Bevy XPBD](/blog/02/bevy-xpbd-0-1-0), with a completely rewritten contact solver, improved performance, a reworked structure, and numerous other improvements over its predecessor. This will be covered in detail later into the post.
+
+## Getting Started
+
+> If you are new to Rust or Bevy, consider first going through Bevy's [Quick Start guide](https://bevyengine.org/learn/quick-start/introduction/).
+
+Getting up to speed with **Avian** is very straightforward! First, add it as a dependency in `Cargo.toml`:
+
+```toml
+[dependencies]
+avian2d = "0.1" # For 2D applications
+avian3d = "0.1" # For 3D applications
+bevy = "0.14"
+```
+
+
+Then, add [`PhysicsPlugins`](https://docs.rs/avian3d/0.1.0/avian3d/prelude/struct.PhysicsPlugins.html) to your Bevy application:
+
+```rust
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins((DefaultPlugins, PhysicsPlugins::default()))
+        .run();
+}
+```
+
+Now, you can use the numerous components and resources provided by **Avian** to add physics behavior to your entities. For example, turning an entity into a rigid body with a collider is as simple as adding the [`RigidBody`](https://docs.rs/avian3d/0.1.0/avian3d/prelude/enum.RigidBody.html) and [`Collider`](https://docs.rs/avian3d/0.1.0/avian3d/prelude/struct.Collider.html) components, and an initial velocity can be specified using [`LinearVelocity`](https://docs.rs/avian3d/0.1.0/avian3d/prelude/struct.LinearVelocity.html):
+
+```rust
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+fn setup(mut commands: Commands) {
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::sphere(0.5),
+        LinearVelocity(Vec3::X),
+    ));
+}
+```
+
+To learn more, refer to the [official documentation](https://docs.rs/avian3d/0.1.0/avian3d/) and check out the [GitHub repository](https://github.com/Jondolf/avian) and the [2D](https://github.com/Jondolf/avian/tree/main/crates/avian2d/examples) and [3D](https://github.com/Jondolf/avian/tree/main/crates/avian3d/examples) examples.
+
+## Highlights
+
+As stated earlier, Avian isn't actually my first physics engine. Instead, it is the rebranded successor of my previous physics engine [Bevy XPBD](/blog/02/bevy-xpbd-0-1-0). The rest of this post will focus on the rebrand and what is new from [Bevy XPBD 0.4](/blog/05/bevy-xpbd-0-4-0).
+
+**Avian 0.1** has a *ton* of improvements, additions, and fixes over its predecessor. Highlights include:
+
+- **A solver rewrite**: Avian uses an impulse-based TGS Soft solver instead of XPBD for contacts.
+- **A reworked narrow phase**: Collision detection is much more performant and reliable.
+- **Continuous Collision Detection (CCD)**: Speculative collision and sweep-based CCD are implemented to prevent tunneling.
+- **Optional collision margins**: Extra thickness can be added for thin colliders such as trimeshes to improve stability and performance.
+- **Improved performance**: Overhead for large scenes is significantly smaller, and collision-heavy scenes can have over a 4-6x performance improvement in comparison to Bevy XPBD.
+- **Improved runtime collider constructors**: It is easier to define colliders and collider hierarchies statically to enable more powerful scene workflows.
+- **Structural improvements and polish**: The module structure has been heavily reworked, and tons of inconsistencies and bugs have been resolved.
+- **[Bevy 0.14](https://bevyengine.org/news/bevy-0-14/) support**: Avian supports the latest version of Bevy, and internally, it already takes advantage of new features such as observers and component lifecycle hooks.
+
+The migration guide and a more complete changelog can be found on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.1.0).
+
+This post is *long*, and there's a lot of topics to cover. We will start by going over some background on what Bevy XPBD was and why a rebrand was deemed necessary, but if you want to skip over to the shiny new stuff instead, feel free to jump to the [Solver Rework](#solver-rework-385) section.
+
+## Background on the Rebrand
+
+Over two years ago, I started a project called Bevy XPBD, a physics engine based on [Extended Position-Based Dynamics](https://matthias-research.github.io/pages/publications/PBDBodies.pdf). I had been playing around with Bevy for a while and was interested in learning about physics simulation, so when I saw a [tutorial series on XPBD physics in Bevy](https://johanhelsing.studio/posts/bevy-xpbd) by Johan Helsing, I decided to follow along.
+
+After finishing the tutorial, I continued slowly working on the project on the side and building out more functionality, until over a year later it was starting to get some recognition, including from Johan himself. I released [Bevy XPBD 0.1](/blog/02/bevy-xpbd-0-1-0) in June 2023, and from that point onwards, it has been my main project and area of interest.
+
+As the project has grown, some things have become more evident to me:
+
+1. There is clearly high demand for a (native) physics integration for Bevy.
+2. There is interest in eventually adding official physics support to Bevy.
+3. Bevy XPBD in its old form would not have been fit for upstreaming.
+
+### Problems With Bevy XPBD
+
+#### XPBD as a Simulation Method
+
+From a simulation standpoint, our XPBD implementation has several issues:
+
+- Solving deep overlap is very energetic and explosive.
+- Position-based constraints often have high-frequency oscillation where bodies are always slightly moving back-and-forth. XPBD rarely, if ever, reaches a truly stable and relaxed state.
+- Friction is typically not quite as robust as it is with impulse-based methods. There are several ways of handling it, some better than others, but it can still have some issues.
+- Many features can be more challenging to implement and expose APIs for, and there are fewer learning resources and references for the usage of XPBD in game physics.
+- Lots of other subtler yet annoying issues that are non-trivial to resolve with XPBD.
+
+Some of the problems could be issues with our implementation, but a lot of them are also inherent to the simulation method, at least when implemented as described in the original papers.
+
+#### Collision and Dynamics
+
+Aside from XPBD as a simulation method, Bevy XPBD also has several other large issues with collisions and rigid body dynamics:
+
+- Unlike most physics engines, narrow phase collision detection is run at every substep instead of just once per frame. This is very bad for performance.
+- There is no support for any kind of Continuous Collision Detection. Tunneling can be an issue.
+- It is not possible to configure the behavior of collisions aside from the number of substeps.
+- Collision events are buggy and even [sent when in close proximity but not in actual contact](https://github.com/Jondolf/avian/issues/224).
+- Sleeping in 0.4 just doesn't work.
+
+#### Branding
+
+I am not entirely content with Bevy XPBD in terms of branding either:
+
+- The acronym XPBD is very easy to mess up. I have seen and heard XPDB, XBPD, and other wrong variations of the name so many times that even I sometimes get confused.
+- People often just call it XPBD even though that is just the name of the simulation method.
+- The name is tied to a specific simulation method, which is restricting and not very future-proof, as we are now realizing.
+- The name has no real identity or character. Most other physics engines have much more unique and fun names like [Bepu](https://www.bepuentertainment.com/), [Jolt](https://jrouwe.github.io/JoltPhysics/), [Havok](https://www.havok.com/), [Chaos](https://dev.epicgames.com/documentation/en-us/unreal-engine/physics-in-unreal-engine), and [Rapier](https://rapier.rs/).
+
+#### Patent?
+
+Perhaps most importantly, from a legal standpoint, there were some potential issues with XPBD: it is technically patented by NVIDIA. This is something I only learned about quite late into the project.
+
+As Bevy XPBD had already gained a lot of popularity in the ecosystem, Bevy's maintainers reached out to share their concerns about the XPBD patent situation. This discussion convinced me to finally commit to the idea of rebranding the project and transitioning away from XPBD entirely. I announced the rebrand in the form of a rather long [GitHub issue](https://github.com/Jondolf/avian/issues/346) in early March this year.
+
+It is important to note that soon after the announcement, we actually got a response from Miles Macklin, one of the inventors of XPBD, about whether there are issues with creating an open source game physics engine with XPBD:
+
+> …\
+> I don't believe there is any restriction here - you can already find many open source and commercial examples of XPBD implementations online.\
+> …
+
+This suggests that using XPBD should actually be fine. However, the wording is still slightly too vague to my liking, and of course we cannot be entirely certain, as NVIDIA still holds the patent. Either way, even for reasons unrelated to the patent, a rebrand and solver rework is warranted.
+
+The new solver will be covered in detail in the [Solver Rework](#solver-rework-385) section. Note that joints still use XPBD for now, as reimplementing them with another approach would've delayed the release by an unreasonable amount of time, but they may be reworked in the future as well.
+
+### Why Avian? 🪶
+
+My criteria for the ideal name were:
+
+- Related to physics or motion in some way (avian: relates to birds and flight).
+- Not tied to a *specific* physics implementation like Bevy XPBD was.
+- Unique and has its own brand identity. Like Bepu, Jolt, Havok, and so on!
+- Relatively short, ideally 4-6 characters.
+- Easy to pronounce and spell.
+- SEO-friendly and googleable.
+- Ideally has some kind of connection to Bevy, and relates to birds or flight 🐦
+- …but not strictly tied to it. Maybe one day we find a way to use the engine without the Bevy core and the ECS?
+- I just personally like the name and how it looks.
+
+I had dozens (or even hundreds!) of name ideas, most of which were already taken or only satisfied a few of these criteria. A bunch of community members also helped with great suggestions, thanks for all of them \<3
+
+After a long time trying to come up with a name, I landed on **Avian**, because it fits all of these criteria perfectly. It's nice and short, not reserved by existing projects, relates to birds and flight, and overall just feels like a pretty natural name for a Bevy physics engine. [A bevy is a flock of birds](https://bevyengine.org/learn/quick-start/introduction/), and physics is what makes the bevy truly avian through the power of flight!
+
+<details>
+    <summary>Why ditch the `bevy_` prefix?</summary>
+
+- Maybe one day we find a way to use the engine without the Bevy core and the ECS?
+- A name like `bevy_avian` would sort of imply that it is a Bevy integration for an `avian` crate, not the core crate itself. Things could get confusing if someone else made an `avian` crate.
+- 3rd party crate names don't have to be as long, and we could even have official sub-crates like `avian_collision`, `avian_spatial`, and `avian_math` (although in practice, these could just have their own names)
+- Several people stated they prefer names without the prefix. This is also not uncommon in the ecosystem: [`big-brain`](https://github.com/zkat/big-brain), [`big_space`](https://github.com/aevyrie/big_space), [`lightyear`](https://github.com/cBournhonesque/lightyear), [`leafwing-input-manager`](https://github.com/Leafwing-Studios/leafwing-input-manager) (and other [Leafwing](https://github.com/Leafwing-Studios) crates) are all popular Bevy plugins with no `bevy_` prefix.
+
+</details>
+
+After lots of iteration, design help from community members, and some finishing touches, we ended up with the following logo:
+
+![Avian banner logo](https://github.com/Jondolf/avian/assets/57632562/ec72406c-4ead-4ed9-8543-b96378a305fd)
+
+<details>
+    <summary>The logo went through several iterations. Click this open to see a few!</summary>
+
+Here's the initial mock-up design I made for the logo:
+
+<img alt="Logo iteration 1" src="/blog-assets/avian-0-1/logo_mock1.png" />
+
+Looks too much like a quill! What if we just… turn it upside down and refine it a little?
+
+<img alt="Logo iteration 2" src="/blog-assets/avian-0-1/logo_mock2.png" />
+
+That looks pretty nice! A bit bland though, so maybe we could just add some color and decorations?
+
+<img alt="Logo iteration 3" src="/blog-assets/avian-0-1/logo_mock3.png" />
+
+Hmm, the blue is nice but the wind doodles don't really look like wind. Let's try something different… What if we made the Bevy logo, but with feathers 🤔
+
+<img alt="Logo iteration 4" src="/blog-assets/avian-0-1/logo_mock4.png" />
+
+Interesting idea and looks like motion, but I'm not sold. Let's return to the original idea.
+
+<img alt="Logo iteration 5" src="/blog-assets/avian-0-1/logo_mock5.png" />
+
+Now we're getting somewhere! Pretty ripples masterfully drawn by @NiseVoid.
+With a bit more polish, we reach the final result:
+
+![Avian banner logo](@assets/avian_logo.png)
+</details>
+
+Now that we've covered what **Avian** is and why the rebrand was done, let's finally jump straight into all of the new shiny features and improvements!
+
+## Solver Rework [#385](https://github.com/Jondolf/avian/issues/385)
+
+*Author: @Jondolf (me)*
+
+The new contact solver uses **TGS Soft**, an impulse-based solver using substepping and [soft constraints](https://docs.rs/avian3d/0.1.0/avian3d/dynamics/solver/softness_parameters/index.html) together with warm starting and relaxation.
+
+<details>
+    <summary>Slow down, what do any of those words mean??</summary>
+
+- **Impulse-based**: Contacts, joints, and other interactions between bodies are handled by applying impulses that modify velocities. The old solver was position-based, and applied corrections by modifying positions directly.
+- **Projected Gauss-Seidel (PGS)**: The classic iterative approach to solving constraints (contacts and joints) using the [Gauss-Seidel](https://en.wikipedia.org/wiki/Gauss%E2%80%93Seidel_method) numerical method. Reframed by Erin Catto as [Sequential Impulses](https://box2d.org/files/ErinCatto_SequentialImpulses_GDC2006.pdf).
+- **Temporal Gauss-Seidel (TGS)**: Same as PGS, but prefers *substepping* over *iteration*, running more simulation steps with smaller time steps rather than simply iteratively solving constraints. Substeps tend to be more effective than iterations, as shown in the [Small Steps in Physics Simulation](https://mmacklin.com/smallsteps.pdf) paper by Macklin et al.
+- **Baumgarte stabilization**: When solving contact constraints using impulses, boost the impulses using a *bias* to account for overlap and actually push the bodies apart.
+- **Soft constraints**: Similar to Baumgarte stabilization, but more stable and controlled. Based on the [harmonic oscillator](https://en.wikipedia.org/wiki/Harmonic_oscillator), soft constraints dampen constraint responses, and can be tuned intuitively with a frequency and damping ratio. The Avian docs have a more in-depth [overview](https://docs.rs/avian3d/0.1.0/avian3d/dynamics/solver/softness_parameters/index.html).
+- **Warm starting**: Store the constraint impulses from the previous frame and initialize the solver by applying them at the start of the current frame. This helps the solver converge on the solution faster, and is especially helpful when objects are coming to rest.
+- **Relaxation**: Baumgarte stabilization and soft constraints can add unwanted energy. Relaxation helps remove it by solving constraints a second time, but without a bias.
+</details>
+
+The choice was largely motivated by the wonderful Erin Catto's [Solver2D] experiments, where TGS Soft was deemed as a clear winner. His video below showcases several different solvers quite well.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/sKHf_o_UCzI?si=6XvA4C7scqyWQ0iM" title="Erin Catto's Solver2D results" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen class="yt-video"></iframe>
+
+Erin Catto's physics engine [Box2D](https://box2d.org/) V3 (currently in beta) was used as the primary inspiration for the core implementation of the new solver. However, engines such as [Rapier](https://rapier.rs/) and [Bepu](https://www.bepuentertainment.com/) also use a similar approach.
+
+<details>
+    <summary>What does the solver implementation look like?</summary>
+
+As stated earlier, contacts use TGS Soft. However, joints still currently use XPBD, so the new solver is actually a kind of hybrid solver. I do plan on transitioning joints away from XPBD in the future though.
+
+Below is a high-level overview of the new structure of the solver.
+
+1. Broad phase collision detection collects potential collision pairs into `BroadCollisionPairs`.
+2. Narrow phase collision detection computes contacts for the pairs and adds them to `Collisions`.
+3. A `ContactConstraint` is generated for each contact manifold, and added to `ContactConstraints`.
+4. Substepping loop, running `SubstepCount` times.
+	1. Integrate velocities, applying gravity and external forces.
+	2. Warm start the solver.
+	3. Solve velocity constraints with bias (soft constraints).
+	4. Integrate positions, moving bodies based on their velocities.
+	5. Relax velocities by solving constraints again, but *without* bias.
+	6. Solve XPBD constraints (joints) and perform XPBD velocity projection.
+5. Perform [swept CCD](#swept-ccd-391) (if enabled).
+6. Apply restitution in a post-phase.
+7. Finalize positions by applying `AccumulatedTranslation`.
+8. Store contact impulses for next frame's warm starting.
+
+Refer to the code and [PR](https://github.com/Jondolf/avian/pull/385) for implementation details. The contact logic and constraints are quite heavily commented and should hopefully be relatively easy to follow (as far as physics engines go).
+</details>
+
+### Results
+
+Collisions now have significantly less drift than before, and performance is much better. Below is a pyramid with a base of 64 boxes, simulated with 4 substeps, with sleeping disabled.
+
+**Old**: XPBD has substantial drift over time, and the pyramid collapses in on itself. This even happens with a much larger number of substeps, although to a slightly lesser degree. Performance is very poor, even with just 4 substeps.
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/solver_pyramid_old.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+**New**: With TGS Soft, the pyramid stays stable. There is a very small amount of drift over a long period of time, but even that can be mitigated by configuring the contact behavior through the `SolverConfig` and/or by adding more substeps. Performance is significantly better.
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/solver_pyramid_new.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+Impulses even out and stabilize *much* better with TGS Soft, even with deep overlap. In overlapping cases, the old XPBD implementation was significantly more explosive. Below is an example where colliders are dynamically enlarged to fill up a container.
+
+**Old**: With XPBD, overlap causes explosions even before the shapes fill the container. Once they do fill the container, they jitter violently and explode through the walls. This is very undesirable for games.
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/solver_compress_old.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+**New**: Overlap is solved perfectly smoothly with no explosions. The contact impulses even out without jitter. With no space to go, the shapes prioritize stability over perfectly hard contacts that would cause explosiveness.
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/solver_compress_new.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+Rigid bodies could even be spawned at the same spot with deep overlap, and it would now get resolved more gently, whereas the old solver had the tendency to blast the bodies into oblivion.
+
+An important thing to note is that the new solver uses several tolerances and thresholds that are length-based, such as the maximum speed at which bodies can be pushed apart, or the velocity threshold for sleeping. The old solver also had some tolerances, but now they are much more important for stability.
+
+Without any tuning, a 2D game expressing object sizes in pixels might have collision issues, because the tolerances would be wrong for that application. For example, below is a scene with stacks of balls that have a radius of 5 pixels, with no tuning whatsoever:
+
+![No tuning](https://github.com/Jondolf/avian/assets/57632562/1e548a85-85ba-4811-9a92-b91ca8142927)
+
+The contacts are too soft. To fix this, there is a new `PhysicsLengthUnit` resource that can be thought of as a kind of pixels-per-meter conversion factor. It is only for scaling the internal tolerances (and debug rendering gizmos!) however, and doesn't scale colliders or velocities in any way.
+
+`PhysicsLengthUnit` can be easily set when adding `PhysicsPlugins` for an app:
+
+```rust
+fn main() {
+    Ap:new()
+        .adplugins((
+            DefaultPlugins,
+            // A 2D game with 10 pixels per meter
+            PhysicsPlugins::default().with_length_unit(10.0),
+    )
+        .run()}
+```
+
+And with that, we get the stability and behavior we expect:
+
+![With the appropriate length unit](https://github.com/Jondolf/avian/assets/57632562/1a64fef5-539d-450d-96da-43fdbaceb430)
+
+Instead of setting the length unit in 2D, you should also consider expressing all of your object sizes in meters and changing the camera projection to scale the visual output to the desired size. This has the added benefit that physical units and values will be more sensible, and the simulation may be even more stable.
+
+In summary:
+
+- Collisions should be much more stable.
+- Resolving overlap is no longer nearly as explosive.
+- Less substeps are generally needed for stability.
+- Small or fast-moving objects should have much less tunneling (see the section on [CCD](#continuous-collision-detection-ccd)).
+- Performance is much better.
+
+However:
+
+- Contacts may even be *too* soft by default in some scenarios. This can be tuned with the `SolverConfig` resource.
+- Static friction is not considered separately from dynamic friction. This may be fixed in the future.
+- Restitution might not be quite as perfect in some instances. This is a tradeoff for [speculative collision](#speculative-collision-385), which will be covered later.
+- 2D applications expressing object sizes in pixels may need to configure the `PhysicsLengthUnit` to get the best simulation results.
+
+The performance improvements are covered in the [Performance Improvements](#performance-improvements) section.
+
+[Solver2D]: https://box2d.org/posts/2024/02/solver2d/
+
+## Collision Detection Rework [#385](https://github.com/Jondolf/avian/issues/385)
+
+*Author: @Jondolf (me)*
+
+As part of the solver rework, narrow phase collision detection has also been reworked.
+
+<details>
+    <summary>What is a narrow phase?</summary>
+
+Collision detection is typically split into two parts: a **broad phase** and a **narrow phase**.
+
+1. The broad phase performs cheap intersection tests to determine all of the *potential* intersection pairs. To speed things up, Axis-Aligned Bounding Boxes (AABBs) and an acceleration structure like a Bounding Volume Hierarchy (BVH) are often used.
+2. The narrow phase iterates through all of the potential intersection pairs and computes the actual contacts for each intersection. In Avian, the narrow phase also generates contact constraints, which are used by the contact solver.
+</details>
+
+### Approximating Contacts for Substeps
+
+Previously, the narrow phase was run at *every* substep. This was very bad for performance, as the narrow phase is one of the most expensive parts of the simulation.
+
+If you think about it, running the narrow phase in the substepping loop makes sense: bodies can move and interact with each other at each substep, which can change the contact data. As costly as it is, we need to compute the contacts every time to get good results, right?
+
+Well, not exactly. Two intersecting bodies are unlikely to move large distances relative to each other within a single frame. We can exploit this [temporal coherence](https://en.wikipedia.org/wiki/Collision_detection#Exploiting_temporal_coherence) and approximate the current contact data at each substep with some simple vector algebra.
+
+If we store the contact data in the local space of each body, we can compute the contact points at the current substep by simply transforming the local points by the current poses of the bodies:
+
+```rust
+// World-space contact points relative to center of mass
+let anchor1 = rotation1 * local_anchor1;
+let anchor2 = rotation2 * local_anchor2;
+```
+
+<br />
+
+<img alt="Updating contact data at substeps" src="/blog-assets/avian-0-1/contact_data_substep.png" />
+
+Then, we can compute the current separation distance based on these points:
+
+```rust
+// Separation distance along contact normal at current substep
+let separation = (position2 + anchor2 - position1 - anchor1).dot(normal);
+```
+
+Or alternatively, to improve precision when far from the world origin, using the position deltas accumulated so far during the frame:
+
+```rust
+// `anchor1` and `anchor2` computed and stored before substepping loop
+let delta_anchor1 = delta_rotation1 * anchor1;
+let delta_anchor2 = delta_rotation2 * anchor2;
+
+// Change in separation distance relative to start of frame
+let delta_separation =
+    (delta_position2 + delta_anchor2 - delta_position2 - delta_anchor2).dot(normal);
+
+// Initial separation computed and stored before substepping loop
+let separation = initial_separation + delta_separation;
+```
+
+Of course, the contact data computed with this approach is approximate, but in practice it is accurate enough and definitely worth it for the performance gains. It makes substepping a viable approach for real-time physics.
+
+The old solver actually used a similar approach already, but trying to move the narrow phase outside of the substepping loop with XPBD had its challenges and stability issues. One potential reason is that with XPBD, the relative positions change after every single constraint solve, not just once per substep, so there is more potential for error. With the new impulse-based solver, it was straightforward to implement.
+
+The performance improvements are covered in the [Performance Improvements](#performance-improvements) section.
+
+### Other Changes and Fixes
+
+- Bevy XPBD had a long-standing bug where [collisions were detected even for bodies that were not actually touching](https://github.com/Jondolf/avian/issues/224). This is now fixed.
+- Entities in collision data are now always sorted in ascending order. This also fixes a bug where collision events would be sent with swapped data when colliding bodies moved past each other along the X axis.
+- Collision data in events is now from the start of each frame instead of from the final substep when collisions are often mostly resolved already.
+
+## Continuous Collision Detection (CCD)
+
+**Tunneling** is a phenomenon where fast-moving small objects can pass through thin geometry such as walls due to collision detection being run at discrete time steps:
+
+<img alt="An object tunneling through a wall due to discrete timesteps" src="/blog-assets/avian-0-1/discrete_collision_tunneling.png" style="max-height: 30rem; width: auto; max-width: 100%" />
+
+Moving the narrow phase out of the substepping loop as described earlier has the unfortunate consequence that it increases the risk of tunneling as collisions are not computed as frequently. Thus, a solution was needed.
+
+One of the primary solutions to tunneling is **Continuous Collision Detection**. There are two common forms: **speculative collision** and **sweep-based CCD**. Luckily, **Avian 0.1** supports both!
+
+### Speculative Collision [#385](https://github.com/Jondolf/avian/issues/385)
+
+*Author: @Jondolf (me)*
+
+**Speculative collision** is a form of Continuous Collision Detection where contacts are predicted before they happen. The contacts are only solved if the entities are expected to come into contact within the next frame.
+
+To determine whether two bodies may come into contact, their AABBs are expanded based on their velocities. Additionally, a **speculative margin** is used to determine the maximum distance at which a collision pair can generate speculative contacts.
+
+<img alt="A visualization of speculative collision" src="/blog-assets/avian-0-1/ccd_speculative.png" style="max-height: 30rem; width: auto; max-width: 100%" />
+
+The current “effective” speculative margin for a body is determined by its velocity clamped by the specified maximum bound. By default, the maximum bound is infinite, but it can be configured for all entities using the `NarrowPhaseConfi5g` resource, and for individual entities using the `SpeculativeMargin` component.
+
+```rust
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+fn setup(mut commands: Commands) {
+    // Spawn a rigid body with a maximum bound for the speculative margin.
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::capsule(0.5, 2.0),
+        SpeculativeMargin(2.0),
+    ));
+}
+```
+
+Speculative collisions are an efficient and generally robust approach to Continuous Collision Detection. They are enabled for all bodies by default, provided that the default naximum speculative margin is greater than zero.
+
+<details>
+    <summary>How is the speculative collision response implemented?</summary>
+
+The effective speculative margin lets us compute the closest points between the two separated bodies. These are used as approximations of the contact points.
+
+When actually solving the contact (the normal part, no friction), [softness parameters](https://docs.rs/avian3d/0.1.0/avian3d/dynamics/solver/softness_parameters/index.html) are only used if the contact is penetrating, meaning that the separation distance is negative. Otherwise, we know that the contact is speculative, and we can bias the impulse to cancel out the velocity that would cause penetration.
+
+```rust
+// Compute incremental impulse (before clamping).
+let impulse = if separation > 0.0 {
+    // Contact is speculative: Push back the part of the velocity that would cause penetration.
+    -effective_mass * (normal_speed + separation / delta_secs)
+} else {
+    // Contact is penetrating: Handle it normally.
+};
+```
+</details>
+
+#### Caveats of Speculative Collision
+
+Speculative contacts are approximations. They typically have good enough accuracy, but when bodies are moving past each other at high speeds, the prediction can sometimes fail and lead to **ghost collisions**. This happens because contact surfaces are treated like infinite planes from the point of view of the solver. Ghost collisions typically manifest as objects bumping into seemingly invisible walls.
+
+<img alt="An object hitting a ghost plane due to an inaccurate speculative contact" src="/blog-assets/avian-0-1/ccd_speculative_ghost_collision.png" style="max-height: 30rem; width: auto; max-width: 100%" />
+
+Ghost collisions can be mitigated by using a smaller `SpeculativeMargin` or a higher `Time<Physics>` timestep rate.
+
+Another caveat of speculative collisions is that they can still occasionally miss contacts, especially for thin objects spinning at very high speeds. This is typically quite rare however, and speculative collision should work fine for the vast majority of cases.
+
+### Swept CCD [#391](https://github.com/Jondolf/avian/issues/391)
+
+*Author: @Jondolf (me)*
+
+**Sweep-based Continuous Collision Detection** sweeps colliders from their previous positions to the current ones, and moves the bodies to the time of impact if a hit was found.
+
+This can be more reliable than speculative collision, and can act as a sort of safety net when you want to ensure that an object has no tunneling, at the cost of being more expensive and causing "time loss" where bodies appear to stop momentarily as they are brought back in time.
+
+<img alt="An object hitting a wall without tunneling thanks to sweep-based CCD" src="/blog-assets/avian-0-1/ccd_sweep.png" style="max-height: 30rem; width: auto; max-width: 100%" />
+
+Two sweep modes are supported:
+
+- `SweepMode::Linear` only considers translational motion.
+- `SweepMode::NonLinear` considers both translational and rotational motion.
+
+<img alt="A comparison of linear and non-linear sweep-based CCD" src="/blog-assets/avian-0-1/ccd_sweep_linear_vs_non_linear.png" style="max-height: 30rem; width: auto; max-width: 100%" />
+
+To enable swept CCD for a rigid body, simply add the `SweptCcd` component and make sure that the `CcdPlugin` is enabled. The plugin is included in the `PhysicsPlugins` plugin group.
+
+```rust
+use avian3d::prelude::*;
+use bevy::prelude::*;
+
+fn setup(mut commands: Commands) {
+    // Spawn a rigid body with swept CCD enabled.
+    // `SweepMode::NonLinear` is used by default.
+    commands.spawn((
+        RigidBody::Dynamic,
+        Collider::capsule(0.5, 2.0),
+        SweptCcd::default(),
+    ));
+}
+```
+
+### Comparison of CCD Approaches
+
+Below, you can see the new `ccd` example with all of the different forms of CCD in action!
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/ccd_comparison.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+As you can see, all the different modes and combinations behave differently, and have their own unique characteristics and trade-offs.
+
+- Discrete collision detection misses almost all contacts, as the objects are moving so fast.
+- Speculative collision helps, but can still miss some collisions for spinning objects. For collisions against static geometry, it should be a lot more reliable.
+- Non-linear swept CCD performs the best, but it has time loss, especially when speculative collision is disabled.
+- Linear swept CCD on the other hand struggles a lot in this spinning case since it doesn't take rotational motion into account at all.
+
+Of course, this is a very extreme and relatively niche example, and each method can have their own pros and cons in different scenarios. For most objects in most games though, just speculative collision should be enough. For the cases where it isn't, swept CCD can be used as a safety net.
+
+Another thing to note is that CCD does *not* prevent bodies from being pushed through other objects due to contact softness. In the future, this could be mitigated to some extent by solving collisions between dynamic and static objects after dynamic-dynamic contacts, giving them higher priority and preventing objects from ever going through the walls or the ground.
+
+## Collision Margins [#393](https://github.com/Jondolf/avian/issues/393)
+
+*Author: @Jondolf (me)*
+
+Collisions for thin objects such as triangle meshes can sometimes have stability and performance issues, especially when dynamically colliding against other thin objects.
+
+- Infinitely thin objects are more prone to numerical issues and tunneling. Two trimeshes colliding against each other can easily get stuck in an intersecting state or have other collision issues.
+- Collision algorithms for intersecting objects are typically more expensive than for the non-intersecting state. Trimesh collisions can be very expensive if the trimesh has dense geometry.
+
+To allow users to mitigate these issues when necessary, a `CollisionMargin` component can now be added to any collider to force the solver to maintain an artificial separation distance between objects. It can be thought of as a kind of shell or skin that adds extra thickness to colliders for collisions, reducing the issues mentioned above.
+
+```rust
+// Add a collision margin around a triangle mesh collider.
+commands.spawn((
+    RigidBody::Dynamic,
+    Collider::trimesh_from_mesh(&mesh),
+    CollisionMargin(0.05),
+));
+```
+
+Dynamic rigid bodies with trimesh colliders colliding against each other *without* a collision margin:
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/without_collision_margin.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+And with a collision margin:
+
+<video controls>
+  <source src="/blog-assets/avian-0-1/with_collision_margin.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+(Note: The sticking issue could also be possibly reduced with trimesh pre-processing using the appropriate `TrimeshFlags`)
+
+Collision margins should not be needed in most cases, and they are primarily useful specifically for collisions between triangle meshes or other extremely thin or hollow shapes. Primitive shapes and convex decomposition should be preferred over trimesh colliders for dynamic objects wherever possible.
+
+## Runtime Collider Constructors [#378](https://github.com/Jondolf/avian/issues/378)
+
+*Authors: @janhohenheim, @Jondolf (me)*
+
+The `Collider` component does not currently support `Reflect`. This can be a problem for people who would like to define collision shapes outside of their own code, such as in assets, or even in external tools like Blender using something like the [Blender_bevy_components_workflow](https://github.com/kaosat-dev/Blender_bevy_components_workflow).
+
+Previous releases had the `AsyncCollider` and `AsyncSceneCollider` components that could automatically generate colliders for meshes and scenes at runtime:
+
+```rust
+fn setup(mut commands: Commands, mut meshes: Assets<Mesh>, mut assets: ResMut<AssetServer>) {
+    // Spawn a cube with a convex hull collider generated from the mesh at runtime.
+    commands.spawn((
+        AsyncCollider(ComputedCollider::ConvexHull),
+        PbrBundle {
+            mesh: meshes.add(Cuboid::default()),
+            ..defaul)
+    ,
+    ));
+
+    // Load a scene and automatically create trimesh colliders for the meshes.
+    // `AsyncSceneCollider` will wait for the scene to be ready before inserting the colliders.
+    let scene = assets.load("my_model.gltf#Scene0");
+    commands.spawn((
+        SceneBundle { scene: scene.clone(), ..default() },
+        AsyncSceneCollider::new(Some(CoutedCollide:TriMesh)),
+    ));
+}
+```
+
+`ComputedCollider` was an enum for specifying what kind of collider is computed for each mesh:
+
+```rust
+pub enum ComputedCollider {
+    TriMesh,
+    TriMeshWithFlags(TriMeshFlags),
+    ConvexHull,
+    ConvexDecomposition(VHACDParameters),
+}
+```
+
+However:
+
+- These types did not implement `Reflect` either, because `TriMeshFlags` and `VHACDParameters` came from a third party dependency ([Parry](https://parry.rs)).
+- The set of supported shapes was quite limiting. When possible, primitive shapes like cuboids, spheres, and capsules should be preferred over mesh-based computed shapes like these for both performance and stability reasons.
+- The "Async" prefix was confusing for a lot of people.
+
+The limitations frequently required people to set up their own enum-based reflectable component that mirrors `Collider`, such as the following:
+
+```rust
+#[derive(Debug, Component, Reflect)
+#[reflect(Component)]
+enum ColliderMirror {
+    Cuboid { /* */ },
+    Sphere { /* */ },
+    Trimesh,
+    // ...
+}
+```
+
+This was not ideal.
+
+Luckily, **Avian 0.1** reworks `AsyncCollider`, `AsyncSceneCollider`, and `ComputedCollider` to be much more general and useful.
+
+`ComputedCollider` is now called `ColliderConstructor`, and it supports almost all shapes, apart from compound shapes (for now):
+
+```rust
+// Supports `Reflect`! (other attributes left out for brevity)
+#[derive(Clone, Debug, PartialEq, Reflect, Component)]
+pub enum ColliderConstructor {
+    Sphere {
+        radius: Scalar,
+    },
+    Cuboid {
+        x_length: Scalar,
+        y_length: Scalar,
+        z_length: Scalar,
+    },
+    // ...other shapes
+    // Note: TriMesh has been renamed to Trimesh for consistency with `Collider::trimesh`.
+    TrimeshFromMesh,
+    TrimeshFromMeshWithConfig(TrimeshFlags),
+    ConvexDecompositionFromMesh,
+    // Note: Previously VHACDParameters, which does not follow Rust's naming conventions.
+    ConvexDecompositionFromMeshWithConfig(VhacdParameters),
+    ConvexHullFromMesh,
+}
+```
+
+It has also been turned into a component that replaces `AsyncCollider`, which previously was just a wrapper around `ComputedCollider`. 
+
+Now that shapes other than meshes are supported, `ColliderConstructor` can also be used in 2D!
+
+Similarly, `AsyncSceneCollider` has been renamed to `ColliderConstructorHierarchy`. Aside from supporting `Reflect` and using `ColliderConstructor`, it has also been reworked to work for *any* hierarchies, not just scenes. This enables more powerful workflows, as `Scene` is no longer a requirement.
+
+```rust
+// Generate sphere colliders for all available descendants, ignoring the hierarchy root itself.
+// If the constructor is a computed shape like `TrimeshFromMesh`, only descendants
+// with a mesh will get a collider by default.
+commands
+    .spawn(ColliderConstructorHierarchy::new(ColliderConstructor::Sphere { radius: 0.5 }))
+    .with_children(|parent| {
+        // ...
+    });
+```
+
+The old behavior is still preserved in that `ColliderConstructorHierarchy` waits for a scene to be loaded
+if the component is placed on one. This behavior requires the new `bevy_scene` feature, which is enabled by default.
+
+## Performance Improvements
+
+### Solver and Narrow Phase Rework
+
+Comparing the old solver and narrow phase to the new ones, both running on Bevy 0.14, there is roughly a 4-5x performance improvement for collision-heavy scenes, with the difference growing with the number of collisions and the number of substeps.
+
+Using 8 substeps:
+
+<img alt="Benchmark comparing old and new solver with 8 substeps" src="/blog-assets/avian-0-1/solver_bench_8_substeps.png" />
+
+With just a single substep, the difference is smaller, but the new solver is still faster, up to 2x.
+
+<img alt="Benchmark comparing old and new solver with 1 substep" src="/blog-assets/avian-0-1/solver_bench_1_substeps.png" />
+
+Note that these are not very thorough benchmarks, and results can vary a bit based on the scene, but through extensively testing out the new solver myself in various samples, I can say that it is definitely *significantly* faster and can handle a lot more collisions, even when single-threaded.
+
+Some reasons for the speedup are most likely:
+
+- Moving the narrow phase outside of the substepping loop.
+- Generating contact constraints in advance outside of the substepping loop.
+- Reducing allocations in the narrow phase.
+- Iterating over contact constraints more efficiently by creating a constraint per manifold (with one or more points stored in them) instead of a constraint per point, reducing unnecessary queries for rigid bodies and colliders.
+
+### Transform Propagation
+
+The engine has a *lot* of additional transform propagation to make sure that positions are kept up to date, `GlobalTransform` is kept in sync with the physics `Position` and `Rotation` components, and user changes to each of the components are accounted for. Not only that, but it also separately propagates `ColliderTransform` components for colliders. And some of the propagation is done *at every substep*.
+
+This wouldn't be that big of an issue if the systems only traversed through physics entities, but in previous releases, they had to traverse through basically *everything*. This resulted in [awful performance for scenes with many non-physics entities](https://github.com/Jondolf/avian/issues/356), even if there were no physics entities in the world at all.
+
+**Avian 0.1** reworks all of the transform propagation systems to use custom implementations that only traverse trees with physics entities. This is done by marking ancestors of physics entities with an `AncestorMarker<C: Component>` component that indicates that some descendant of the entity has the given component. This can be used to skip traversing trees that have no effect on the simulation.
+
+The result is *significantly* better performance for scenes with many non-physics entities.
+
+**Test scene**: 12 substeps, 1 root entity, 100,000 child entities. All entities have just a `SpatialBundle`, and one child entity also has a `Collider`.
+
+- Before: ~22 FPS
+- After optimizing `ColliderTransform` propagation: ~200 FPS
+- After optimizing both `ColliderTransform` and `Transform` propagation: **~490 FPS**
+
+These were tested before the solver rework. Now, in **Avian 0.1**, I get up to 600 FPS (not entirely sure where that +110 FPS comes from). Nice!
+
+## Reworked Module Structure [#370](https://github.com/Jondolf/avian/issues/370)
+
+*Author: @Jondolf (me)*
+
+The old high-level module structure looked like this:
+
+<img alt="Old module structure" src="/blog-assets/avian-0-1/old_module_structure.png" />
+
+where `plugins` looked like this:
+
+<img alt="Plugins in old module structure" src="/blog-assets/avian-0-1/old_module_structure_plugins.png" />
+
+This structure wasn't ideal.
+
+- `components` just contains a bunch of components with no clear separation of concerns, and some components are still stored elsewhere, so it's not even comprehensive.
+- `resources` has the same issue; no separation of concerns, and it's pretty random which resources are there vs. elsewhere.
+- `constraints` should not be a top-level module. It's mainly a solver implementation detail.
+- `plugins` is weird, because it has lots of sub-modules with sub-plugins, and really it's just a folder for basically all functionality in the engine.
+
+It was fine in the beginning, but as the engine has grown, the lack of separation of concerns has really started harming the modularity of the engine and can make it harder to find and organize things.
+
+**Avian 0.1** has a new reworked structure without modules like `plugins`, `components`, or `resources`. Everything is separated by logical concerns.
+
+<img alt="New module structure" src="/blog-assets/avian-0-1/new_module_structure.png" />
+
+This helps with organization, discoverability, documentation, and nicer import paths. For example, everything related to rigid body dynamics is just in `dynamics` instead of being split across a dozen separate modules with no central place for a high-level overview.
+
+The `PhysicsSetupPlugin` has also been split into a `PhysicsSchedulePlugin` and a `PhysicsTypeRegistrationPlugin`.
+
+For user applications migrating from Bevy XPBD, most imports from the `prelude` should work like before, but explicit import paths may need to be changed.
+
+## API Consistency Improvements
+
+### `Collider` Constructor Methods
+
+*Author: @Jondolf (me)*
+
+The `new` constructors for Bevy's `Cylinder`, `Capsule`, and `Cone` shapes take a radius first, and a height second.
+
+```rust
+Capsule::new(radius, height)
+```
+
+However, our collider constructors have used the opposite order:
+
+```rust
+Collider::capsule(height, radius)
+```
+
+The reason for this is that it is the order used by [Parry](https://parry.rs) (the collision detection library), and Bevy's primitive shapes were added afterwards with a different ordering. This is a very unfortunate inconsistency and can easily lead to confusion.
+
+To match Bevy's APIs, the order of arguments has changed for some `Collider` constructors.
+
+- Use `Collider::cylinder(radius, height)` instead of `Collider::cylinder(height, radius)`.
+- Use `Collider::capsule(radius, height)` instead of `Collider::capsule(height, radius)`.
+- Use `Collider::capsule_endpoints(radius, a, b)` instead of `Collider::capsule_endpoints(a, b, radius)`.
+- Use `Collider::cone(radius, height)` instead of `Collider::cone(height, radius)`.
+
+Applications migrating from Bevy XPBD will likely notice this as colliders having completely wrong dimensions before fixing the ordering. It is a very highly breaking change, but I believe it is important that we align ourselves with Bevy here sooner rather than later.
+
+In addition, `Collider::halfspace` has been renamed to `Collider::half_space` for consistency with `HalfSpace`.
+
+### `Rotation` Component [#370](https://github.com/Jondolf/avian/issues/370)
+
+*Author: @Jondolf (me)*
+
+**Avian** has its own `Rotation` component for the global rotations of physics entities. It has been updated to match the API of Bevy's new [`Rot2`](https://docs.rs/bevy/0.14.0/bevy/math/struct.Rot2.html) type more closely.
+
+The primary breaking changes are that `rotate` and `mul` have been deprecated in favor of `Mul` implementations, and the 2D `from_radians` and `from_degrees` have been renamed to just `radians` and `degrees`.
+
+```rust
+// Before
+let rotation = Rotation::from_degrees(45.0);
+assert_eq!(rotation.mul(rotation).rotate(Vec2::X), Vec2::Y);
+
+// After
+let rotation = Rotation::degrees(45.0);
+assert_eq!(rotation * rotation * Vec2::X, Vec2::Y);
+```
+
+`Add` and `Sub` implementations have also been removed, as adding or subtracting quaternions in 3D is *not* quite equivalent to performing rotations, which can be a footgun, and having the 2D version function differently would also be inconsistent.
+
+## Sensor Mass Properties [#381](https://github.com/Jondolf/avian/pull/381)
+
+*Author: @Jondolf (me)*
+
+The `Sensor` component can be used to make a `Collider` behave like a trigger that detects collisions and sends events, but does not cause an actual collision response and apply forces on colliding bodies. This is often used to detect when something enters or leaves an area or is intersecting some shape.
+
+In Bevy XPBD, colliders could contribute to the mass properties of rigid bodies and have an effect on the center of mass. This differs from most peoples' expectations, and is also different from many existing engines such as Godot and Unity.
+
+**Avian 0.1** changes the behavior of sensors so that they no longer have an impact on the physics simulation at all, apart from sending collision events. To add mass for them yourself, you can add another collider that is _not_ a sensor, or manually add mass properties with the `MassPropertiesBundle` or its components.
+
+## Other Changes and Fixes
+
+- Sleeping has been fixed, but it is only enabled for bodies that are not interacting with other dynamic bodies until we have island-based sleeping. [#385](https://github.com/Jondolf/avian/issues/385)
+- Rotations are normalized after solving joints to prevent explosiveness and other stability issues. [#345](https://github.com/Jondolf/avian/issues/345)
+- `RegularPolygon` colliders now use a custom shape implementation. [#367](https://github.com/Jondolf/avian/issues/367)
+- Collider scale is applied before physics instead of afterwards, fixing a one-frame delay. [#374](https://github.com/Jondolf/avian/issues/374)
+- Collider scale is now propagated correctly for rigid bodies that are not root entities. [#375](https://github.com/Jondolf/avian/issues/375)
+- Fixed angular corrections for fixed and prismatic joints having the wrong sign, causing explosiveness. [#388](https://github.com/Jondolf/avian/issues/388)
+- Angular corrections for 2D joints are now actually 2D, not computed with vectors assuming Z as the rotation axis. [#390](https://github.com/Jondolf/avian/issues/390)
+- Joint and constraint logic has been refactored to be cleaner and more readable. [#390](https://github.com/Jondolf/avian/issues/390)
+- Many more types now implement `Reflect` and other reflection traits and are registered. [#395](https://github.com/Jondolf/avian/issues/395)
+- Lots of other bug fixes and stability improvements.
+
+## What's Next?
+
+**Avian 0.1** is a big step forward from Bevy XPBD, and I'm incredibly excited for the future.
+
+I have lots of plans, including:
+
+- **[Simulation islands](https://box2d.org/posts/2023/10/simulation-islands/)**: The current per-body sleeping approach is flawed, and should be replaced with an island-based approach. Simulation islands could also be used to parallelize parts of the solver for large worlds.
+- **Joint rework**: Joints still need a lot of work. Reference frames, motors, 6DOF joints, nicer softness tuning, more limit options… I have prototypes for a lot of these already, but decided that it's better to let them bake for a little while longer. Joints would also need changes if/when we implement simulation islands or replace XPBD with another approach.
+- **Broad phase rework**: The current broad phase algorithm is very basic, just a single-axis sweep and prune. A Bounding Volume Hierarchy could be much better. [OBVHS](https://github.com/DGriffin91/obvhs) by Griffin looks very promising.
+- **Glam-based collision detection and geometric queries**: I've been talking about this for a long time, but I am very interested in building out a [Parry](https://parry.rs) alternative that uses Bevy's math types and fits our needs better. I plan on attempting to upstream several geometric queries during the Bevy 0.15 cycle and building on top of that.
+- **Collide-and-slide**: There is currently no useful functionality for kinematic character controllers. Collisions are an incredibly common requirement for kinematic bodies, and non-trivial to get right, so we should offer a first-party solution that other functionality can use as a foundation.
+- **Improved examples**: A lot of the existing examples are very basic and not well organized or comprehensive. We should build out a high-quality collection of examples from basic usage and feature demonstrations to more complex but common gameplay scenarios.
+
+Simulation islands, geometric queries for Bevy's primitives, and working towards Glam-based collision detection will likely be the next big tasks I will focus on, but there are numerous other smaller improvements I'd also like to implement. There's always more to do!
+
+On a more personal note: I have officially graduated from high school, and will start university in late August. There's still a decent amount of time until then, but once it does start, I will most likely have less time for development. I will try my best though, and I am very invested in trying to improve the state of physics and collision detection in the Bevy ecosystem.
+
+With that being said, I am going to take at least a few days off to recharge my batteries before starting work on new features again. Going through the rebrand and various rewrites has been quite a stressful undertaking, but I am glad that we did it and that everything turned out so well in the end.
+
+As always, huge thanks to everyone for all of the incredible support! Without you, this project would not be where it is today.
+
+## Support Me
+
+While Avian will always be free and permissively licensed, developing and maintaining it takes a lot of time and effort.
+
+If you find my work valuable, it is now possible to [support me through GitHub Sponsors](https://github.com/sponsors/Jondolf). This is ultimately my hobby, but by supporting me you can help make it more sustainable.
+
+Thank you ❤️
