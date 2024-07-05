@@ -56,6 +56,9 @@ function getEntryHref(item: Entry) {
     <li>
       <a href="/blog">Blog</a>
     </li>
+    <li>
+      <a href="https://github.com/sponsors/Jondolf" target="_blank">Support Me</a>
+    </li>
   </ul>
 </nav>
 
@@ -136,6 +139,7 @@ function getEntryHref(item: Entry) {
       text-decoration: none;
       position: relative;
       color: var(--text-color-1);
+      text-wrap: nowrap;
       height: 3rem;
       transition: color 200ms ease;
 
@@ -168,5 +172,15 @@ function getEntryHref(item: Entry) {
     box-sizing: border-box;
     display: flex;
     justify-content: flex-end;
+  }
+  
+  @media only screen and (max-width: 640px) {
+    ul {
+      gap: 1rem;
+    }
+
+    .search-bar-container{
+      padding: 0 1rem;
+    }
   }
 </style>
