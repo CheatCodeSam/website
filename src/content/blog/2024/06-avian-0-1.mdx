@@ -425,7 +425,7 @@ To determine whether two bodies may come into contact, their AABBs are expanded 
 
 <img alt="A visualization of speculative collision" src="/blog-assets/avian-0-1/ccd_speculative.png" style="max-height: 30rem; width: auto; max-width: 100%" />
 
-The current “effective” speculative margin for a body is determined by its velocity clamped by the specified maximum bound. By default, the maximum bound is infinite, but it can be configured for all entities using the `NarrowPhaseConfi5g` resource, and for individual entities using the `SpeculativeMargin` component.
+The current “effective” speculative margin for a body is determined by its velocity clamped by the specified maximum bound. By default, the maximum bound is infinite, but it can be configured for all entities using the `NarrowPhaseConfig` resource, and for individual entities using the `SpeculativeMargin` component.
 
 ```rust
 use avian3d::prelude::*;
