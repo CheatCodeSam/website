@@ -673,7 +673,9 @@ if the component is placed on one. This behavior requires the new `bevy_scene` f
 
 ## Performance Improvements
 
-### Solver and Narrow Phase Rework
+### Solver and Narrow Phase Rework [#385](https://github.com/Jondolf/avian/issues/385)
+
+*Author: @Jondolf (me)*
 
 Comparing the old solver and narrow phase to the new ones, both running on Bevy 0.14, there is roughly a 4-5x performance improvement for collision-heavy scenes, with the difference growing with the number of collisions and the number of substeps.
 
@@ -694,7 +696,9 @@ Some reasons for the speedup are most likely:
 - Reducing allocations in the narrow phase.
 - Iterating over contact constraints more efficiently by creating a constraint per manifold (with one or more points stored in them) instead of a constraint per point, reducing unnecessary queries for rigid bodies and colliders.
 
-### Transform Propagation
+### Transform Propagation [#377](https://github.com/Jondolf/avian/issues/377) and [#380](https://github.com/Jondolf/avian/issues/380)
+
+*Author: @Jondolf (me)*
 
 The engine has a *lot* of additional transform propagation to make sure that positions are kept up to date, `GlobalTransform` is kept in sync with the physics `Position` and `Rotation` components, and user changes to each of the components are accounted for. Not only that, but it also separately propagates `ColliderTransform` components for colliders. And some of the propagation is done *at every substep*.
 
@@ -811,6 +815,7 @@ In Bevy XPBD, colliders could contribute to the mass properties of rigid bodies 
 - `RegularPolygon` colliders now use a custom shape implementation. [#367](https://github.com/Jondolf/avian/issues/367)
 - Collider scale is applied before physics instead of afterwards, fixing a one-frame delay. [#374](https://github.com/Jondolf/avian/issues/374)
 - Collider scale is now propagated correctly for rigid bodies that are not root entities. [#375](https://github.com/Jondolf/avian/issues/375)
+- Collider hierarchy logic has been extracted from the `ColliderBackendPlugin` into its own `ColliderHierarchyPlugin` [#377](https://github.com/Jondolf/avian/issues/377)
 - Fixed angular corrections for fixed and prismatic joints having the wrong sign, causing explosiveness. [#388](https://github.com/Jondolf/avian/issues/388)
 - Angular corrections for 2D joints are now actually 2D, not computed with vectors assuming Z as the rotation axis. [#390](https://github.com/Jondolf/avian/issues/390)
 - Joint and constraint logic has been refactored to be cleaner and more readable. [#390](https://github.com/Jondolf/avian/issues/390)
