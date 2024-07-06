@@ -15,7 +15,7 @@ import TableOfContents from "@components/TableOfContents.astro"
 
 I am happy to announce that **Avian Physics 0.1** has been released!
 
-**Avian** is an ECS-based 2D and 3D physics engine for [Bevy](https://bevyengine.org/), a refreshingly simple data-driven game engine built in Rust. Avian prioritizes ergonomics and modularity, with a focus on providing a native ECS-driven user experience.
+[**Avian**](https://github.com/Jondolf/avian) is an ECS-based 2D and 3D physics engine for [Bevy](https://bevyengine.org/), a refreshingly simple data-driven game engine built in Rust. Avian prioritizes ergonomics and modularity, with a focus on providing a native ECS-driven user experience.
 
 It is the next evolution of my previous physics engine [Bevy XPBD](/blog/02/bevy-xpbd-0-1-0), with a completely rewritten contact solver, improved performance, a reworked structure, and numerous other improvements over its predecessor. This will be covered in detail later into the post.
 
@@ -31,7 +31,6 @@ avian2d = "0.1" # For 2D applications
 avian3d = "0.1" # For 3D applications
 bevy = "0.14"
 ```
-
 
 Then, add [`PhysicsPlugins`](https://docs.rs/avian3d/0.1.0/avian3d/prelude/struct.PhysicsPlugins.html) to your Bevy application:
 
