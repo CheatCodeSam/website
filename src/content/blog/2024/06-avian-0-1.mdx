@@ -302,13 +302,14 @@ The contacts are too soft. To fix this, there is a new `PhysicsLengthUnit` resou
 
 ```rust
 fn main() {
-    Ap:new()
-        .adplugins((
+    App::new()
+        .add_plugins((
             DefaultPlugins,
             // A 2D game with 10 pixels per meter
             PhysicsPlugins::default().with_length_unit(10.0),
-    )
-        .run()}
+        ))
+        .run()
+}
 ```
 
 And with that, we get the stability and behavior we expect:
