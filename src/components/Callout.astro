@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import Markdown from "./Markdown.svelte";
 
 interface Props {
-  variant: "tip" | "warning" | "danger" | "info";
+  variant: "tip" | "warning" | "danger" | "note";
   title?: string;
 }
 
@@ -17,7 +17,7 @@ const icon = (() => {
       return "lucide:alert-triangle";
     case "danger":
       return "lucide:flame";
-    case "info":
+    case "note":
       return "lucide:info";
   }
 })();
@@ -40,7 +40,7 @@ function capitalize(str: string) {
       danger: variant === "danger",
     },
     {
-      info: variant === "info",
+      info: variant === "note",
     },
   ]}
 >
