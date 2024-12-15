@@ -1,0 +1,110 @@
+---
+import { Icon } from "astro-icon/components";
+import Markdown from "./Markdown.svelte";
+
+interface Props {
+  variant: "tip" | "warning" | "danger" | "info";
+  title?: string;
+}
+
+const { variant, title } = Astro.props as Props;
+
+const icon = (() => {
+  switch (variant) {
+    case "tip":
+      return "lucide:lightbulb";
+    case "warning":
+      return "lucide:alert-triangle";
+    case "danger":
+      return "lucide:flame";
+    case "info":
+      return "lucide:info";
+  }
+})();
+
+function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+---
+
+<div
+  class:list={[
+    "callout",
+    {
+      tip: variant === "tip",
+    },
+    {
+      warning: variant === "warning",
+    },
+    {
+      danger: variant === "danger",
+    },
+    {
+      info: variant === "info",
+    },
+  ]}
+>
+  <div class="callout-header">
+    <Icon name={icon} class="callout-icon" aria-hidden="true" />
+    <Markdown class="callout-variant" markdown={capitalize(title || variant)} />
+  </div>
+  <slot />
+</div>
+
+<style lang="scss">
+  .callout {
+    width: 100%;
+    padding: 1rem;
+    margin: 1rem 0;
+    box-sizing: border-box;
+    border-radius: 0.6rem;
+
+    &.tip {
+      background-color: oklch(0.33 0.04 160);
+      color: oklch(0.94 0.05 160);
+    }
+
+    &.info {
+      background-color: oklch(0.33 0.04 213);
+      color: oklch(0.94 0.05 213);
+    }
+
+    &.warning {
+      background-color: oklch(0.33 0.04 80);
+      color: oklch(0.94 0.05 80);
+    }
+
+    &.danger {
+      background-color: oklch(0.33 0.04 20);
+      color: oklch(0.94 0.05 20);
+    }
+
+    [data-icon] {
+      font-size: 1.4rem;
+    }
+
+    > .callout-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+
+      > :global(:last-child) {
+        margin-top: 0;
+      }
+    }
+
+    > summary {
+      padding: 1rem;
+    }
+
+    & > :not(summary):first-of-type {
+      margin-top: 0;
+    }
+
+    :global(:last-child) {
+      margin-bottom: 0rem;
+    }
+  }
+</style>
