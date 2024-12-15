@@ -1,5 +1,5 @@
 import { defineConfig, sharpImageService } from 'astro/config';
-import netlify from "@astrojs/netlify/functions";
+import netlify from "@astrojs/netlify";
 import sitemap from "@astrojs/sitemap";
 import partytown from "@astrojs/partytown";
 import svelte from '@astrojs/svelte';
@@ -25,7 +25,4 @@ export default defineConfig({
   image: {
     service: sharpImageService(),
   },
-  experimental: {
-    assets: true
-  }
 });
