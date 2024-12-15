@@ -60,7 +60,7 @@ const imgSrc = thumbnail?.src
   {
     headings.length > 0 && (
       <div class="side-toc">
-        <span class="toc-title">Table of contents</span>
+        <span class="toc-title">Table of Contents</span>
         <ul>
           {headings.map((heading) => (
             <li class={`toc-depth-${heading.depth}`}>
@@ -303,10 +303,10 @@ const imgSrc = thumbnail?.src
 
     blockquote {
       margin-left: 0;
-      padding-left: 1.0rem;
+      padding-left: 1rem;
       color: var(--text-color-2);
       border-left: 3px solid var(--accent-2);
-      
+
       p:first-child {
         margin-top: 0;
       }
@@ -318,7 +318,8 @@ const imgSrc = thumbnail?.src
       border-radius: 0.5rem;
     }
 
-    video, .yt-video {
+    video,
+    .yt-video {
       display: block;
       width: 100%;
       height: auto;

@@ -23,7 +23,7 @@ const canonicalUrl =
   "https://joonaa.dev" + (canonical ? canonical : Astro.url.pathname);
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -87,8 +87,7 @@ const canonicalUrl =
     <!-- Partytown and Google Analytics -->
     <script
       type="text/partytown"
-      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"
-    ></script>
+      src="https://www.googletagmanager.com/gtag/js?id=G-X5YP3LR405"></script>
     <script type="text/partytown">
       window.dataLayer = window.dataLayer || [];
       function gtag() {
@@ -135,7 +134,10 @@ const canonicalUrl =
         padding-top: 4rem;
         box-sizing: border-box;
         font-size: 1.05em;
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
         font-weight: 400;
         background-color: var(--bg-1);
       }
@@ -195,7 +197,7 @@ const canonicalUrl =
           margin-top: 0;
         }
 
-        :last-child{
+        :last-child {
           margin-bottom: 0rem;
         }
 
