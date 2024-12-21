@@ -175,6 +175,10 @@ const canonicalUrl =
 
       a {
         color: var(--link-color);
+
+        &:not(code) {
+          text-decoration: none;
+        }
       }
 
       details {
@@ -221,10 +225,18 @@ const canonicalUrl =
       :not(pre) > code {
         font-size: 0.95em;
         font-weight: bold;
-        background: rgba(255, 200, 200, 12%);
-        color: #dd8888;
+        background: oklch(0.4 0.01 286 / 0.6);
+        color: var(--text-color-2);
         border-radius: 4px;
         padding: 0.3em 0.45em;
+      }
+
+      a > code {
+        color: var(--accent-1);
+
+        &:hover {
+          background: oklch(0.4 0.01 286 / 0.8);
+        }
       }
 
       pre.astro-code {
