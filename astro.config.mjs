@@ -7,6 +7,7 @@ import mdx from '@astrojs/mdx';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { remarkReadingTime } from './remark-plugins/remark-reading-time.mjs';
+import { remarkGitHubMentions } from './remark-plugins/remark-github-mentions.mjs';
 
 import icon from 'astro-icon';
 
@@ -21,7 +22,7 @@ export default defineConfig({
       theme: 'github-dark',
       wrap: true
     },
-    remarkPlugins: [remarkMath, remarkReadingTime],
+    remarkPlugins: [remarkMath, remarkReadingTime, remarkGitHubMentions],
     rehypePlugins: [rehypeKatex]
   },
   image: {
