@@ -27,7 +27,7 @@ function capitalize(str: string) {
 }
 ---
 
-<div
+<aside
   class:list={[
     "callout",
     {
@@ -49,7 +49,7 @@ function capitalize(str: string) {
     <Markdown class="callout-variant" markdown={capitalize(title || variant)} />
   </div>
   <slot />
-</div>
+</aside>
 
 <style lang="scss">
   .callout {
