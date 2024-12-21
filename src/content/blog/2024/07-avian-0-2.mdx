@@ -1,0 +1,705 @@
+---
+id: 7
+title: "Avian Physics 0.2"
+description: "Reworked scheduling, transform interpolation, overhauled mass properties, and more 🪶"
+createdAt: 2024-12-21
+tags:
+  - "Physics"
+  - "Simulation"
+  - "Rust"
+  - "Bevy"
+thumbnail: "@assets/avian_0_2.png"
+thumbnailOptimization: true
+---
+import ReleaseNoteMetadata from '@components/ReleaseNoteMetadata.astro';
+import Callout from "@components/Callout.astro"
+
+export const AVIAN_URL = 'https://github.com/Jondolf/avian';
+
+[**Avian**](https://github.com/Jondolf/avian) is an ECS-based 2D and 3D physics engine for [Bevy](https://bevyengine.org/), a refreshingly simple data-driven game engine built in Rust. Avian prioritizes ergonomics and modularity, with a focus on providing a native ECS-driven user experience.
+
+Check out the [GitHub repository](https://github.com/Jondolf/avian) and [introductory post](https://joonaa.dev/blog/06/avian-0-1) for more details.
+
+## Highlights
+
+**Avian 0.2** is another massive release, with several new features, quality-of-life improvements, and important bug fixes. Highlights include:
+
+- **Reworked scheduling**: Avian now runs in Bevy's `FixedPostUpdate` instead of having its own fixed timestep in `PostUpdate`, simplifying scheduling and fixing several common footguns.
+- **Transform interpolation**: Movement at fixed timesteps can be visually smoothed with built-in transform interpolation or extrapolation.
+- **Mass property rework**: Mass properties have been overhauled from the ground up to be much more intuitive, flexible, and configurable.
+- **Physics picking**: Colliders have a picking backend for [`bevy_picking`](https://docs.rs/bevy_picking/0.15.0/bevy_picking/).
+- **Disabling physics entities**: Rigid bodies, colliders, and joints can be temporarily disabled with marker components.
+- **Better defaults**: Collision layers, friction, and restitution now have more sensible and configurable defaults.
+- **Improved 3D friction**: Friction behavior in 3D is much more stable and realistic than before.
+- **Limit maximum speeds**: The maximum speed of rigid bodies can be easily clamped for stability and gameplay purposes.
+- **[Bevy 0.15](https://bevyengine.org/news/bevy-0-15/) support**: Avian supports the latest version of Bevy.
+
+The migration guide and a more complete changelog can be found on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.2.0).
+
+## Reworked Scheduling
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[457]} repo={AVIAN_URL} />
+
+So far, Avian has run physics in the `PostUpdate` schedule by default, using its own custom-made fixed timestep solution. This choice was originally motivated by [`bevy_rapier`](https://github.com/dimforge/bevy_rapier) (which defaults to `PostUpdate`) and some historical limitations and ergonomics problems associated with Bevy's `FixedUpdate`. These days however, working with fixed timesteps in Bevy is overall much nicer.
+
+**Avian 0.2** reworks scheduling to use Bevy's own fixed timestep by running physics in the [`FixedPostUpdate`](https://docs.rs/bevy/0.15.0/bevy/app/struct.FixedPostUpdate.html) schedule by default. This further unifies the engine with Bevy's own APIs, more closely matches the schedule order used by engines like Unity and Godot, and significantly simplifies scheduling, while also fixing several footguns and bugs.
+
+<details>
+<summary>Why `FixedPostUpdate` instead of `FixedUpdate` or `FixedPreUpdate`?</summary>
+
+`FixedUpdate` is very often used for gameplay logic and various kinds of simulations. It is also commonly used for user-side physics logic, like character movement, explosions, moving platforms, effects that apply forces/impulses, custom gravity, and so on.
+
+For a lot of these use cases, it is important to run logic before internal physics systems, and if physics was run in `FixedUpdate`, systems would need to be ordered explicitly. Otherwise, you could get determinism issues caused by system ordering ambiguities, along with frame delay issues.
+
+And as for `FixedPreUpdate`: if we ran physics _before_ gameplay logic in `FixedUpdate`, movement and anything else that affects physics could have an additional delay of one or more frames.
+
+I believe that using `FixedPostUpdate` is the sensible default, and it is also in line with engines like Unity and Godot, where internal physics is run near the end of the fixed update/process step. People can always configure the ordering in their own applications if needed.
+
+</details>
+
+### Scheduling Changes
+
+The [`Time<Physics>`](https://docs.rs/avian3d/0.1.2/avian3d/schedule/struct.Physics.html) clock no longer has a custom timestep. Instead, it follows the clock of the schedule that physics is run in; in `FixedPostUpdate`, physics uses a fixed timestep with `Time<Fixed>`, but if physics is instead configured to run in a schedule like `PostUpdate`, it will use a variable timestep with `Time<Virtual>`.
+
+Previously, the physics timestep could be configured like this:
+
+```rust
+// "Run physics every 1/50 seconds, advancing the simulation by that amount"
+app.insert_resource(Time::new_with(Physics::fixed_hz(50.0)));
+```
+
+In schedules with a fixed timestep, you even needed to use `fixed_once_hz`, which was rather confusing and footgunny:
+
+```rust
+// "Every time the physics schedule runs, advance the simulation by 1/50 seconds"
+app.insert_resource(Time::new_with(Physics::fixed_once_hz(50.0)));
+```
+
+Now, if you are running physics in `FixedPostUpdate`, you should simply configure `Time<Fixed>` directly:
+
+```rust
+app.insert_resource(Time::<Fixed>::from_hz(50.0)));
+```
+
+The `Time<Physics>` resource still exists to allow people to configure the simulation speed, pause and unpause the simulation independently of the schedule's default clock, and set up their own custom scheduling for physics.
+
+Switching to Bevy's fixed timestep has also fixed some other issues: physics no longer runs slower at lower frame rates, and determinism is much better.
+
+### Okay, How Does This Affect Me?
+
+Physics now runs *before* `Update`, in `FixedPostUpdate`. For most users however, very few changes should be necessary, and the majority of systems that were previously running in `Update` or `PostUpdate` can likely remain there.
+
+As a general rule of thumb, `FixedUpdate` should be used for systems that affect physics by continuously changing velocity or applying forces, such as for character movement, force fields, or anything else that uses delta time or should run before physics. This can help minimize delay and improve determinism.
+
+One common case that is worth pointing out is that camera following logic previouly had to run in a very specific place to avoid jitter,
+in `PostUpdate`, in between physics and transform propagation:
+
+```rust
+// Run after physics, before transform propagation.
+app.add_systems(
+    PostUpdate,
+    camera_follow_player
+        .after(PhysicsSet::Sync)
+        .before(TransformSystem::TransformPropagate),
+);
+```
+
+Now that physics is run in `FixedPostUpdate`, which is before `Update`, it should be enough to order the system against just transform propagation:
+
+```rust
+// Note: camera following could technically be in `Update` too now.
+app.add_systems(
+    PostUpdate,
+    camera_follow_player.before(TransformSystem::TransformPropagate),
+);
+```
+
+## Transform Interpolation
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[566]} repo={AVIAN_URL} />
+
+Running physics at a fixed timestep is necessary for frame rate independent and deterministic behavior, but it has a problem. Unless the timestep happens to perfectly match the display refresh rate, physics might not run at all on some frames, while on some other frames it can even run *several* times to catch up to real time. This produces visibly choppy movement.
+
+Below is an example running at just 10 Hz to exaggerate the problem.
+
+<video controls>
+  <source src="/blog-assets/avian-0-2/no_interpolation.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+A solution that doesn't sacrifice determinism is known as **transform interpolation**. It stores transforms from the previous and current physics ticks, and eases between them in between fixed timesteps. This results in movement that looks smooth and accurate, at the cost of rendered positions being slightly behind the “true” gameplay positions.
+
+<video controls>
+  <source src="/blog-assets/avian-0-2/interpolation.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+Another option is **transform extrapolation**, which instead eases between the current position and a future position predicted based on velocity. This produces more responsive movement than transform interpolation, but can sometimes produce jarring results, such as objects being briefly rendered inside walls when their velocity changes abruptly and the prediction is wrong.
+
+<video controls>
+  <source src="/blog-assets/avian-0-2/extrapolation.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+**Avian 0.2** adds built-in support for both transform interpolation and extrapolation, powered by my new crate [`bevy_transform_interpolation`](https://github.com/Jondolf/bevy_transform_interpolation). It is designed to be a very flexible drop-in solution with minimal restrictions to how you normally work with transforms.
+
+`bevy_transform_interpolation` supports:
+
+- Automatically smooth out movement in `FixedPreUpdate`, `FixedUpdate`, and `FixedPostUpdate`, with either `Transform` interpolation or extrapolation
+- Granularly ease individual `Transform` properties to reduce unnecessary computation
+- Apply easing to specific entities or to all entities
+- Optional Hermite interpolation to produce more natural and accurate movement that considers velocity
+
+The crate is actually completely physics-agnostic, and even works with `bevy_rapier`. Just make sure that `Transform` changes are done in the fixed schedules, and it should automatically get eased!
+
+### Usage
+
+For easy integration, **Avian 0.2** has a `PhysicsInterpolationPlugin` that sets everything up, along with some re-exported types for convenience. It is included in `PhysicsPlugins` by default.
+
+Interpolation and extrapolation can be enabled for individual entities using the `TransformInterpolation` and `TransformExtrapolation` components respectively:
+
+```rust
+fn setup(mut commands: Commands) {
+    // Enable interpolation for this rigid body.
+    commands.spawn((
+        RigidBody::Dynamic,
+        Transform::default(),
+        TransformInterpolation,
+    ));
+
+    // Enable extrapolation for this rigid body.
+    commands.spawn((
+        RigidBody::Dynamic,
+        Transform::default(),
+        TransformExtrapolation,
+    ));
+}
+```
+
+Now, any changes made to the `Transform` of the entity in `FixedPreUpdate`, `FixedUpdate`, or `FixedPostUpdate` will automatically be smoothed in between fixed timesteps.
+
+Transform properties can also be interpolated individually by adding the `TranslationInterpolation`, `RotationInterpolation`, and `ScaleInterpolation` components, and similarly for extrapolation.
+
+```rust
+fn setup(mut commands: Commands) {
+    // Only interpolate translation.
+    commands.spawn((Transform::default(), TranslationInterpolation));
+    
+    // Only interpolate rotation.
+    commands.spawn((Transform::default(), RotationInterpolation));
+    
+    // Only interpolate scale.
+    commands.spawn((Transform::default(), ScaleInterpolation));
+    
+    // Mix and match!
+    // Extrapolate translation and interpolate rotation.
+    commands.spawn((
+        Transform::default(),
+        TranslationExtrapolation,
+        RotationInterpolation,
+    ));
+}
+```
+
+If you want *all* rigid bodies to be interpolated or extrapolated by default, you can use `PhysicsInterpolationPlugin::interpolate_all()` or `PhysicsInterpolationPlugin::extrapolate_all()`:
+
+```rust
+fn main() {
+    App::build()
+        .add_plugins(PhysicsInterpolationPlugin::interpolate_all())
+        // ...
+        .run();
+}
+```
+
+When interpolation or extrapolation is enabled for all entities, you can still opt out of it for individual entities by adding the `NoTransformEasing` component, or the individual `NoTranslationEasing`, `NoRotationEasing`, and `NoScaleEasing` components.
+
+Note that changing `Transform` manually in any schedule that *doesn't* use a fixed timestep is also supported, but it is equivalent to teleporting, and disables interpolation for the entity for the remainder of that fixed timestep.
+
+### Showcase
+
+Below is the new `interpolation` example, demonstrating how interpolation and extrapolation smooth out the visual result even at very low tick rates. You can also see how interpolation lags slightly behind, while extrapolation aims to predict the next frame.
+
+<video controls>
+  <source src="/blog-assets/avian-0-2/physics_interpolation.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+## Mass Property Rework
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[500, 532, 574]} repo={AVIAN_URL} />
+
+Previously, mass properties in Avian were inefficient, confusing, and limited in what you could do. For example:
+
+- `Mass`, `Inertia`, and `CenterOfMass` can be added to a rigid body to specify its initial mass properties. However, the mass properties of colliders and descendants are *always* added on top, to the same components. From the user's perspective, the initial mass information is lost, and *there is no way to fully override mass properties on spawn*.
+- Mass properties cannot be set individually for colliders. Only the density is configurable.
+- If you manually set `Mass` to a lower value at runtime, and then remove a collider, you could end up with *negative* mass.
+- Angular inertia is not scaled when mass is changed at runtime.
+- Specifying the center of mass at spawn does nothing, *except* if an initial mass is specified.
+- In 3D, the world-space angular inertia tensor is unnecessarily recomputed multiple times per substep.
+
+**Avian 0.2** overhauls how mass properties work from the ground up.
+
+### `Mass` and `ComputedMass`
+
+Using the same component for the *user-specified* mass and the *total* mass (that takes all attached colliders into account) was problematic.
+
+The *total mass properties* of rigid bodies are now stored in the new `ComputedMass`, `ComputedAngularInertia`, and `ComputedCenterOfMass` components. By default, these are updated automatically when mass properties are changed, or when colliders are added or removed. Computed mass properties are required for `RigidBody`, and inserted automatically.
+
+Now, the `Mass`, `AngularInertia`, and `CenterOfMass` components instead represent the mass properties associated with a *specific* entity. These are optional and never modified by Avian directly. If a rigid body entity has `Mass(10.0)`, and its child collider has `Mass(5.0)`, their mass properties will be combined as `ComputedMass(15.0)`.
+
+```rust
+// Total mass for rigid body: 10 + 5 = 15
+commands.spawn((
+    RigidBody::Dynamic,
+    Collider::capsule(0.5, 1.5),
+    Mass(10.0),
+))
+.with_child((Collider::circle(1.0), Mass(5.0)));
+```
+
+<Callout variant="note">
+    As you might have noticed, `Inertia` was also renamed to `AngularInertia` for clarity and correctness. `ComputedMass` and `ComputedAngularInertia` also store inverses, replacing the old `InverseMass` and `InverseInertia` components.
+</Callout>
+
+If `Mass`, `AngularInertia`, or `CenterOfMass` are not set for an entity, the mass properties of its collider will be used instead, if present. Overridding mass with `Mass` also scales angular inertia accordingly, unless it is overriden with `AngularInertia`.
+
+Sometimes, you might not want child entities or colliders to contribute to the total mass properties. This can be done by adding the `NoAutoMass`, `NoAutoAngularInertia`, and `NoAutoCenterOfMass` marker components, giving you full manual control.
+
+```rust
+// Total mass: 10.0
+// Total center of mass: [0.0, -0.5, 0.0]
+commands.spawn((
+    RigidBody::Dynamic,
+    Collider::capsule(0.5, 1.5),
+    Mass(10.0),
+    CenterOfMass::new(0.0, -0.5, 0.0),
+    NoAutoMass,
+    NoAutoCenterOfMass,
+    Transform::default(),
+))
+.with_child((
+    Collider::circle(1.0),
+    Mass(5.0),
+    Transform::from_translation(Vec3::new(0.0, 4.0, 0.0)),
+));
+```
+
+That's pretty much it! To recap, the core API has been distilled into:
+
+1. By default, mass properties are computed from attached colliders and `ColliderDensity`.
+2. Mass properties can be overridden for individual entities with `Mass`, `AngularInertia`, and `CenterOfMass`.
+3. If the rigid body has descendants (child colliders), their mass properties will be combined for the total `ComputedMass`, `ComputedAngularInertia`, and `ComputedCenterOfMass`.
+4. To prevent child entities from contributing to the total mass properties, use the `NoAutoMass`, `NoAutoAngularInertia`, and `NoAutoCenterOfMass` marker components.
+
+This is *much* more predictable and flexible than the old system.
+
+This isn't all that has changed though. I have implemented *many* more improvements here.
+
+### API Improvements
+
+#### Representation
+
+Unlike the computed mass property components, `Mass`, `AngularInertia`, and `CenterOfMass` have user-friendly representations with public fields. 3D `AngularInertia` differs the most, as it now stores a principal angular inertia (`Vec3`) and the orientation of the local inertial frame (`Quat`) instead of an inertia tensor (`Mat3`). This is more memory efficient and more intuitive to tune by hand.
+
+```rust
+// Most derives and docs have been stripped for readability.
+
+#[derive(Component, Default, Deref, DerefMut)]
+pub struct Mass(pub f32);
+
+// This is in 3D. The 2D version just stores a scalar.
+#[derive(Component)]
+pub struct AngularInertia {
+    /// The principal angular inertia, representing resistance to angular acceleration
+    /// about the local coordinate axes defined by the `local_frame`.
+    pub principal: Vec3,
+    /// The orientation of the local inertial frame.
+    pub local_frame: Quat,
+}
+
+#[derive(Component, Default, Deref, DerefMut)]
+pub struct CenterOfMass(pub Vec3);
+```
+
+#### `bevy_heavy` Integration
+
+[`bevy_heavy`](https://github.com/Jondolf/bevy_heavy) is my new mass property crate for Bevy. It provides `MassProperty2d` and `MassProperty3d` types, and traits for computing mass properties for *all* of Bevy's primitive shapes. **Avian 0.2** takes advantage of this in a few ways.
+
+`Collider` now implements the `ComputeMassProperties2d`/`ComputeMassProperties3d` trait for mass property computation. This lets you compute various mass properties for colliders directly, with a much richer API.
+
+```rust
+// Compute all mass properties for a capsule collider with a density of `2.0`.
+// This returns a `MassProperties2d` or `MassProperties3d` struct.
+let capsule = Collider::capsule(0.5, 1.5);
+let mass_properties = capsule.mass_properties(2.0);
+
+// Compute individual mass properties (2D here)
+let mass = capsule.mass(2.0);
+let angular_inertia = capsule.angular_inertia(mass);
+let center_of_mass = capsule.center_of_mass();
+```
+
+`Mass`, `AngularInertia`, `CenterOfMass`, and `MassPropertiesBundle` now also have a `from_shape` method that takes a type implementing `ComputeMassProperties2d`/`ComputeMassProperties3d` and a density. A nice bonus is that you can also use Bevy's primitive shapes:
+
+```rust
+// Construct individual mass properties from a collider.
+let shape = Collider::sphere(0.5);
+commands.spawn((
+    RigidBody::Dynamic,
+    Mass::from_shape(&shape, 2.0),
+    AngularInertia::from_shape(&shape, 1.5),
+    CenterOfMass::from_shape(&shape),
+));
+
+// Construct a `MassPropertiesBundle` from a primitive shape.
+let shape = Sphere::new(0.5);
+commands.spawn((RigidBody::Dynamic, MassPropertiesBundle::from_shape(&shape, 2.0)));
+```
+
+<Callout variant="note">
+    For now, mass properties for colliders still use Parry's mass computation methods, which are less flexible. If we eventually manage to replace Parry with an alternative using Bevy's geometric primitives, we could transition to only using `bevy_heavy` for mass properties.
+</Callout>
+
+`bevy_heavy` also provides an [`AngularInertiaTensor`](https://docs.rs/bevy_heavy/0.1.0/bevy_heavy/struct.AngularInertiaTensor.html) type to make conversions and working with inertia tensors more straightforward. This is used a bit internally, and also returned by methods like `AngularInertia::tensor`.
+
+#### `MassPropertyHelper` System Parameter
+
+Sometimes, it can be useful to compute or update mass properties for individual entities or hierarchies manually. There is now a new `MassPropertyHelper` system parameter for this, with the following methods:
+
+- `update_mass_properties`
+- `total_mass_properties` (descendants + local)
+- `descendants_mass_properties`
+- `local_mass_properties`
+
+These are now also used internally for mass property updates.
+
+I expect the `MassPropertyHelper` to get more user-facing utilities in the future as we identify usage patterns and common tasks users need to perform.
+
+### Other Changes and Improvements
+
+- In 3D, world-space angular inertia is now cached in an automatically updated `GlobalAngularInertia` component, reducing unnecessary computation.
+- `ColliderMassProperties` stores `MassProperties2d`/`MassProperties3d` instead of separate properties. This simplifies a lot of internals and provides a richer API.
+- `ColliderMassProperties` is now properly read-only, excluding setting the component directly or reinserting it.
+- Mass property logic is now encapsulated in a `MassPropertyPlugin`.
+- Added `MassPropertiesSystems` system sets for mass properties.
+- Zero mass and angular inertia is now treated as valid, and interpreted as infinite mass (like in most engines). It no longer emits warnings, and collider density is not clamped in any way.
+- Added a *lot* more helper methods and constructors for mass properties.
+- Added a *ton* of documentation and polish for mass properties.
+- Added lots of tests to verify behavior is as expected.
+
+Phew, that should be most of it! This mass property rework ended up taking *way* more time and effort than I had anticipated, spanning several months, and we went through *numerous* different designs to figure out what makes sense in our ECS context. I think it ended up quite nice though :)
+
+## Physics Picking
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[554]} repo={AVIAN_URL} />
+
+[Bevy 0.15](https://bevyengine.org/news/bevy-0-15/) added support for [entity picking](https://bevyengine.org/news/bevy-0-15/#entity-picking-selection), with built-in support for UI, sprites, and meshes. Picking for colliders was left to the respective third party crates.
+
+**Avian 0.2** adds a `PhysicsPickingPlugin`, largely based on the [`AvianBackend`](https://github.com/aevyrie/bevy_mod_picking/blob/7494b9614a50a9c25e77a9bdccdb9c010a506ae9/backends/bevy_picking_avian/src/lib.rs) in the original [`bevy_mod_picking`](https://github.com/aevyrie/bevy_mod_picking). To avoid unnecessary overhead for apps that don't need it, it must be added manually:
+
+```rust
+fn main() {
+    App::new()
+        .add_plugins((PhysicsPlugins::default(), PhysicsPickingPlugin))
+        // ...
+        .run();
+}
+```
+
+Once it is enabled, you will receive pointer events when hovering or otherwise interacting with colliders.
+
+<video controls>
+  <source src="/blog-assets/avian-0-2/physics_picking.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+To make physics picking opt-in for entities, set `PhysicsPickingSettings::require_markers` to `true`, and add the `PhysicsPickable` component to collider entities that should be pickable.
+
+## Collision Layer Defaults
+
+<ReleaseNoteMetadata authors={['aceeri', 'Jondolf']} prs={[476, 494]} repo={AVIAN_URL} />
+
+Previously, `CollisionLayers` defaulted to "all memberships, all filters", meaning that everything belonged to every layer, and could interact with every layer. This default originated from Rapier.
+
+However, this turned out to be very limiting in practice. If you had a layer like `GameLayer::Enemy`, and wanted to cast a ray against all enemies, the query would also include all *other* entities, unless they were explicitly specified *not* to belong to the enemy layer. Layers should be something you add entities to, not something you remove them from.
+
+In **Avian 0.2**, colliders only belong to the first layer by default. This means that the first bit `0b0001` in the layer mask is now reserved for the default layer. This approach matches the [Box2D](https://box2d.org/) physics engine.
+
+This also applies to enum-based layers using the `PhysicsLayer` derive macro. To make the default layer more explicit, physics layer enums must now implement `Default`, and specify which variant should represent the default layer `0b0001`.
+
+```rust
+#[derive(PhysicsLayer, Default)]
+enum GameLayer {
+    #[default]
+    Default, // The name doesn't matter, but Default is used here for clarity.
+    Player,
+    Enemy,
+    Ground,
+}
+```
+
+## Maximum Speed Clamping
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[580]} repo={AVIAN_URL} />
+
+Sometimes, it can be useful to limit the maximum speeds of rigid bodies, both for stability and gameplay purposes. This is straightforward to implement manually outside of the physics schedules, but ensuring that the maximum speed is never exceeded *within* the physics simulation is less straightforward, as it must be integrated directly into the substepping loop.
+
+**Avian 0.2** introduces optional `MaxLinearSpeed` and `MaxAngularSpeed` components for clamping linear and angular velocity respectively. Global defaults may also be added in the future.
+
+```rust
+// Create a rigid body with linear speed limited to 100 units per second.
+commands.spawn((
+    RigidBody::Dynamic,
+    Collider::capsule(0.5, 1.25),
+    MaxLinearSpeed(100.0),
+));
+```
+
+<Callout variant="note" title="Why `Speed` instead of `Velocity`?">
+    Velocity is a vector quantity that has both a magnitude and a direction. Speed is the magnitude of velocity, and is the correct term in this case.
+</Callout>
+
+<Callout variant="tip" title="Stability">
+    If you encounter an unstable system that is behaving explosively or irratically for whatever reason, consider using `MaxLinearSpeed` and `MaxAngularSpeed` to limit the speeds of the relevant bodies and help bring things under control, or to at least get a better idea of what could be happening.
+</Callout>
+
+## Friction and Restitution Defaults
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[551]} repo={AVIAN_URL} />
+
+In Avian 0.1, bodies are bouncy by default, with a coefficient of restitution of `0.3`. Coefficients of static and dynamic friction are also `0.3`. These defaults were originally chosen quite arbitrarily, and are somewhat questionable.
+
+Restitution should ideally be opt-in, as it is unnecessary for most objects, and defaulting to no bounciness often makes behavior easier to reason about while also providing a subtle performance boost. Friction should also be higher, as the current behavior is overly "slidey" and does not match the average real-world material well.
+
+**Avian 0.2** changes the default coefficient of restitution to `0.0`, and the default coefficients of friction to `0.5`, matching Rapier.
+
+<details>
+<summary>To guide the new defaults, I also gathered some data on what other engines use as their default values for the coefficients and combine rules.</summary>
+
+- Jolt: 0 restitution (max), 0.2 friction (geometric mean)
+- Box2D: 0 restitution (max), 0.6 friction (geometric mean)
+- PhysX: 0 restitution (average), 0 friction (average)
+- Rapier: 0 restitution (average), 0.5 friction (average)
+- Godot: 0 restitution ("absorbent" boolean), 1.0 friction ("rough" boolean)
+- Unity 2D: 0 restitution (max), 0.4 friction (geometric mean)
+- Unity 3D: 0 restitution (average), 0.6 friction (average)
+
+There's a lot of variation here, but everything except Avian defaults to zero restitution, and friction in other engines also tends to be higher.
+
+</details>
+
+Previously, `Friction` and `Restitution` were added automatically, so the defaults were hard-coded. Now, the new `DefaultFriction` and `DefaultRestitution` resources are used instead, so it is possible to define your own "default physics material", similar to engines like Unity.
+
+```rust
+// Same defaults as Box2D
+app.insert_resource(DefaultFriction(
+    Friction::new(0.6).with_combine_rule(CoefficientCombine::GeometricMean)
+));
+app.insert_resource(DefaultRestitution(
+    Restitution::ZERO.with_combine_rule(CoefficientCombine::Max)
+));
+```
+
+A sharp-eyed reader might have noticed that there is also a new coefficient combine rule, `GeometricMean`! It combines two coefficients `a` and `b` by computing their [geometric mean](https://en.wikipedia.org/wiki/Geometric_mean) `sqrt(a * b)`. This is also found in engines such as Box2D and Jolt.
+
+## Improved 3D Friction
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[542]} repo={AVIAN_URL} />
+
+3D friction in Avian 0.1 had a serious bug where the frictional impulse was not always applied along the tangent, but rather along the contact normal.
+
+One example of resulting strange behavior was when objects fell on a corner or edge. You would expect the following cube to bounce off to the side, but it stays perfectly at the center:
+
+
+<img src="/blog-assets/avian-0-2/broken_friction.gif" alt="A box falling onto a platform with an unrealistic bounce" />
+
+Another pathological case was a box with locked rotation and zero restitution landing on the ground, and suprisingly bouncing upwards:
+
+<img src="/blog-assets/avian-0-2/broken_friction_2.gif" alt="A box falling onto a platform with an unrealistic bounce" />
+
+This has now been fixed, and friction behaves much better:
+
+<img src="/blog-assets/avian-0-2/fixed_friction.gif" alt="A box falling onto a platform with a realistic bounce" />
+
+The problem took quite a lot of debugging, but it ended up being just a flipped sign... Hey, that's physics engine development for you :D
+
+## Disabling Physics Entities
+
+<ReleaseNoteMetadata authors={['Jondolf', 'shanecelis']} prs={[519, 536, 584]} repo={AVIAN_URL} />
+
+A common question users have asked is: "How can I disable physics for this specific entity, and turn it back on later?"
+
+The answer has often been related to removing and reinserting `RigidBody`, or messing around with `CollisionLayers` or sensors, but this can be inconvenient to do without removing important information.
+
+**Avian 0.2** adds built-in `RigidBodyDisabled`, `ColliderDisabled`, and `JointDisabled` components for temporarily disabling physics entities in a non-destructive way.
+
+- `RigidBodyDisabled` disables velocity, forces, contact response, and joints for a rigid body.
+- `ColliderDisabled` disables collision detection and spatial queries for a collider.
+- `JointDisabled` disables a joint constraint.
+
+Using `RigidBodyDisabled` might look like this:
+
+```rust
+#[derive(Component)]
+pub struct Character;
+
+/// Disables physics for all rigid body characters, for example during cutscenes.
+fn disable_character_physics(
+    mut commands: Commands,
+    query: Query<Entity, (With<RigidBody>, With<Character>)>,
+) {
+    for entity in &query {
+        commands.entity(entity).insert(RigidBodyDisabled);
+    }
+}
+
+/// Enables physics for all rigid body characters.
+fn enable_character_physics(
+    mut commands: Commands,
+    query: Query<Entity, (With<RigidBody>, With<Character>)>,
+) {
+    for entity in &query {
+        commands.entity(entity).remove::<RigidBodyDisabled>();
+    }
+}
+```
+
+## Spatial Query Improvements
+
+<ReleaseNoteMetadata authors={['Jondolf', 'janhohenheim']} prs={[493, 510]} repo={AVIAN_URL} />
+
+### Shape Cast API
+
+Shape casts now support a few more configuration options provided by [Parry](https://parry.rs/): [`target_distance`] and [`compute_contact_on_penetration`].
+
+Cool, more configuration for advanced use cases! However it does make the API very unreadable:
+
+```rust
+let hits = spatial.shape_hits(
+    &shape,
+    origin,
+    shape_rotation,
+    direction,
+    max_time_of_impact,
+    max_hits,
+    target_distance,
+    compute_contact_on_penetration,
+    ignore_origin_penetration,
+    &query_filter,
+);
+```
+
+Without the variable names, it's even worse, as there are many numbers and booleans that are indistinguishable without looking at the docs. There are also no sane defaults, as _every_ setting must be configured explicitly, even if the user is unlikely to need to care about some of them.
+
+To help mitigate this, most of the configuration options are now stored in a `ShapeCastConfig`, improving clarity and ergonomics.
+
+```rust
+let hits = spatial.shape_hits(
+    &shape,
+    origin,
+    shape_rotation,
+    direction,
+    max_hits,
+    &ShapeCastConfig {
+        max_distance,
+        target_distance,
+        compute_contact_on_penetration,
+        ignore_origin_penetration,
+    },
+    &filter,
+);
+```
+
+In most cases, the configuration can use default values for most options, so it ends up looking even more concise.
+
+```rust
+let config = ShapeCastConfig::from_max_distance(100.0);
+let hits = spatial.shape_hits(
+    &Collider::sphere(0.5),
+    Vec3::ZERO,
+    Quat::default(),
+    Dir3::ZERO,
+    10,
+    &config,
+    &filter,
+);
+```
+
+[`target_distance`]: https://docs.rs/avian3d/0.2.0/avian3d/spatial_query/struct.ShapeCastConfig.html#structfield.target_distance
+[`compute_contact_on_penetration`]: https://docs.rs/avian3d/0.2.0/avian3d/spatial_query/struct.ShapeCastConfig.html#structfield.compute_contact_on_penetration
+
+### Other Improvements
+
+- Added `cast_shape_predicate` and `project_point_predicate` to match existing `cast_ray_predicate`.
+- Renamed every `time_of_impact` for spatial queries to just `distance`. This also matches Unity.
+- Changed spatial queries performed through `SpatialQuery` to take `SpatialQueryFilter` by reference.
+- Fixed longstanding documentation issue: ray and shape hit data is in *world space* relative to the centers of the shapes, not in local space.
+- Improved and cleaned up documentation and added some more helper methods.
+
+## Other Changes and Fixes
+
+There have been a *lot* of changes, fixes, and improvements. Here are some of the most notable ones that have not already been covered in this post:
+
+- Fixed locked axes in gyroscopic torque computation by @unpairedbracket in [#486](https://github.com/Jondolf/avian/pull/486)
+- Fixed real part of quaternion derivatives by @unpairedbracket in [#488](https://github.com/Jondolf/avian/pull/488)
+- Use [required components](https://docs.rs/bevy/0.15.0/bevy/ecs/component/trait.Component.html#required-components) for the insertion of most physics components by @Jondolf in [#541](https://github.com/Jondolf/avian/pull/541)
+- Don't insert `CollidingEntities` automatically by @Jondolf in [#541](https://github.com/Jondolf/avian/pull/541)
+- Make entity order in `Contacts` independent of `Entity` IDs by @cBournhonesque in [#480](https://github.com/Jondolf/avian/pull/480)
+- Fix missing `bitflags/serde` flag for `serialize` feature by @janhohenheim in [#502](https://github.com/Jondolf/avian/pull/502)
+- Add examples using [`bevy_mod_debugdump`](https://github.com/jakobhellermann/bevy_mod_debugdump) to visualize scheduling by @Vrixyz in [#383](https://github.com/Jondolf/avian/pull/383)
+- Add convenience methods for determining if collisions are starting or stopping by @ndarilek in [#529](https://github.com/Jondolf/avian/pull/529)
+- Use `Entity` `Display` in messages instead of `Debug` by @NiseVoid in [#545](https://github.com/Jondolf/avian/pull/545)
+- Remove overlap warnings by @NiseVoid in [#547](https://github.com/Jondolf/avian/pull/547)
+- Add missing `Deref` and `DerefMut` trait to `AngularVelocity` in 2D by @Lommix in [#544](https://github.com/Jondolf/avian/pull/544)
+- Replace snapshots with hash-based cross-platform determinism test by @Jondolf in [#555](https://github.com/Jondolf/avian/pull/555)
+- Add `find_deepest_contact` for `Contacts` and `ContactManifold` by @Jondolf in [#556](https://github.com/Jondolf/avian/pull/556)
+- Add helpers for `ContactData` and `SingleContact` to flip contact data by @Jondolf in [#557](https://github.com/Jondolf/avian/pull/557)
+- Fix rotation multiplication order in `transform_to_position` by @Jondolf in [#575](https://github.com/Jondolf/avian/pull/575)
+- Make sure `Collider::triangle` is oriented CCW by @Jondolf in [#579](https://github.com/Jondolf/avian/pull/579)
+- Add `SolverSchedulePlugin` to encapsulate solver scheduling by @Jondolf in [#577](https://github.com/Jondolf/avian/pull/577)
+- Add `cargo doc` to CI and fix doc links by @Jondolf in [#582](https://github.com/Jondolf/avian/pull/582)
+- Revert schedule change for debug render by @Hellzbellz123 in [#497](https://github.com/Jondolf/avian/pull/497)
+- Fix documentation for `apply_force_at_point` (local vs. world space) by @johannesvollmer in [#430](https://github.com/Jondolf/avian/pull/430)
+- Renormalize rotation in 2D integration and clean up `renormalize` by @Jondolf in [#590](https://github.com/Jondolf/avian/pull/590)
+- Fix missing `bevy_render/serialize` dependency. by @spectria-limina in [#592](https://github.com/Jondolf/avian/pull/592)
+- Expose `EllipseColliderShape` and `RegularPolygonColliderShape` by @Jondolf in [#596](https://github.com/Jondolf/avian/pull/596)
+
+A more complete list of changes can be found on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.2.0).
+
+## What's Next?
+
+This release focused more on general usability and quality-of-life improvements than I had originally intended,
+but I think it was important to address transform interpolation and mass properties sooner rather than later.
+
+As for the next large improvements, I *hope* to implement:
+
+- **Simulation islands**: By simulating interacting groups of rigid bodies in separate [simulation islands](https://box2d.org/posts/2023/10/simulation-islands/),
+  we can implement more robust sleeping, and have inter-island parallelism for the constraint solver.
+- **Joint rework**: We should finally switch from XPBD to impulse-based joints, and implement motors, servos,
+  proper reference frames, nicer stiffness tuning, and more.
+- **Broad phase rework**: We should switch our broad phase from the basic sweep-and-prune implementation
+  to a dynamic [Bounding Volume Hierarchy (BVH)](https://en.wikipedia.org/wiki/Bounding_volume_hierarchy) with separate dynamic, static, and kinematic trees
+  that could be reused for spatial queries. This would most likely be using [OBVHS](https://github.com/DGriffin91/obvhs) once it supports incremental updates.
+- **Character controller**: We should have built-in (kinematic) character controller functionality, like a robust move-and-slide algorithm,
+  ground detection, slope handling, stair autostepping, and support for moving platforms, and also provide examples for how it can be used to implement
+  more specialized controllers for platformers, top-down games, first-person shooters, and so on.
+
+These have been on the roadmap for quite a while now, but I have some initial progress on all of them.
+Simulation islands and the joint rework are perhaps the most important right now, and I really hope to get them done for the next release.
+
+At the same time, I'd like to add some better examples and stress tests, and especially add some basic [diagnostics](https://github.com/Jondolf/avian/issues/564)
+to see how long different parts of the simulation step take, among other useful information.
+These will be very important when working on optimizations and otherwise testing the engine's capabilities.
+
+This release was a bit late, since a lot of the changes I wanted to include were only ready right at the end of the cycle,
+and these release notes always take a while to write. I'll try to start release preparation earlier next time.
+Thanks again for all of the support and patience 🪶
+
+## Support Me
+
+While Avian will always be free and permissively licensed, developing and maintaining it takes a lot of time and effort.
+
+If you find my work valuable, consider [supporting me through GitHub Sponsors](https://github.com/sponsors/Jondolf). This is ultimately my hobby, but by supporting me you can help make it more sustainable.
+
+Thank you ❤️
