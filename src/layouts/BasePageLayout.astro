@@ -31,6 +31,13 @@ const canonicalUrl =
     <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Joona Aalto"
+      href={new URL("blog/feed.xml", Astro.site)}
+    />
+
     <!-- Icons and manifest  -->
     <link
       rel="apple-touch-icon"
