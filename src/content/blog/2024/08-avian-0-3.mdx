@@ -1,0 +1,923 @@
+---
+id: 8
+title: "Avian Physics 0.3"
+description: "Improved contact reporting, collision hooks, and many more collision detection updates"
+createdAt: 2025-05-10
+tags:
+  - "Physics"
+  - "Simulation"
+  - "Rust"
+  - "Bevy"
+thumbnail: "@assets/avian_0_3.png"
+thumbnailOptimization: true
+---
+import ReleaseNoteMetadata from '@components/ReleaseNoteMetadata.astro';
+import Callout from "@components/Callout.astro"
+
+export const AVIAN_URL = 'https://github.com/Jondolf/avian';
+
+**Avian Physics 0.3** has been released! 🪶
+
+[**Avian**](https://github.com/Jondolf/avian) is an ECS-based 2D and 3D physics engine for [Bevy](https://bevyengine.org/),
+a refreshingly simple data-driven game engine built in Rust. Avian prioritizes ergonomics and modularity,
+with a focus on providing a native ECS-driven user experience.
+
+Check out the [GitHub repository](https://github.com/Jondolf/avian)
+and [introductory post](https://joonaa.dev/blog/06/avian-0-1) for more details.
+
+## Highlights
+
+**Avian 0.3** is another huge release, with several new features, quality-of-life improvements, and important bug fixes. Highlights include:
+
+- **Opt-in contact reporting**: Collision events are now only sent for entities that have the `CollisionEventsEnabled` component, reducing unwanted overhead and iteration.
+- **Observable collision events**: Observers finally support collision events, making it easy to define per-entity collision handlers.
+- **Collision hooks**: Users can "hook into" the collision pipeline, making it possible to efficiently filter and modify contacts.
+- **Per-manifold material properties**: Friction, restitution, and tangent velocity can be modified for contact manifolds, allowing the simulation of non-uniform materials and conveyor belts.
+- **Collider context**: Custom colliders that implement `AnyCollider` have a `Context` for ECS access.
+- **Physics diagnostics**: Avian has built-in diagnostics and a debug UI for runtime physics profiling.
+- **Reworked contact pair management**: Contacts have been massively reworked to reduce allocations and unnecessary work while increasing parallelism.
+- **Faster collisions and spatial queries**: Collisions and spatial queries have much less overhead.
+- **Bevy 0.16 support**: Avian has been updated to the latest version of Bevy, and is taking advantage of relationships for attaching colliders to rigid bodies.
+
+The migration guide and a more complete changelog can be found on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.3.0).
+
+## Opt-In Contact Reporting
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[683]} repo={AVIAN_URL} />
+
+In previous releases, Avian has sent the `CollisionStarted`, `CollisionEnded`, and `Collision`
+events for *all* contact pairs. This had fairly significant overhead for contact-heavy
+scenarios, and often resulted in unnecessary iteration in user code. You rarely need
+collision events for every collider in the world.
+
+**Avian 0.3** introduces a new `CollisionEventsEnabled` component that can be added to enable
+collision events for a collider. Collision events are only sent for a contact between two entities
+if either of the colliders involved has this component.
+
+```rust
+commands.spawn((
+    RigidBody::Kinematic,
+    Collider::capsule(0.5, 1.5),
+    // Enable collision events for this collider.
+    CollisionEventsEnabled,
+));
+```
+
+If you wish to revert to the old behavior, consider making `CollisionEventsEnabled` a required component
+for `Collider` to insert it automatically:
+
+```rust
+app.register_required_components::<Collider, CollisionEventsEnabled>();
+```
+
+Finally, the `Collision` event no longer exists, as it unnecessarily duplicated lots of collision data.
+Instead, use `Collisions` directly, or get colliding entities using the `CollidingEntities` component.
+
+## Observable Collision Events
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[704, 717]} repo={AVIAN_URL} />
+
+The `CollisionStarted` and `CollisionEnded` events can be read with an `EventReader`.
+However, in a lot of cases, you only care about collisions involving a *specific* entity,
+such as when a character walks over pickups or steps on a pressure plate. With `EventReader`,
+this required iterating through all events and checking which entities were involved in the collision,
+which was both inefficient and unergonomic.
+
+**Avian 0.3** introduces new `OnCollisionStart` and `OnCollisionEnd` events that are triggered
+for entities with the `CollisionEventsEnabled` component. They can be listened to with
+Bevy's observers, making them well-suited for per-entity collision handling.
+
+A simple example of a pressure plate that logs a message when a player steps on it:
+
+```rust
+#[derive(Component)]
+struct Player;
+
+#[derive(Component)]
+struct PressurePlate;
+
+fn setup_pressure_plates(mut commands: Commands) {
+    commands.spawn((
+        PressurePlate,
+        Collider::cuboid(1.0, 0.1, 1.0),
+        Sensor,
+        // Enable collision events for this collider.
+        CollisionEventsEnabled,
+    ))
+    // Observer for responding to collisions starting with the pressure plate.
+    .observe(|trigger: Trigger<OnCollisionStart>, player_query: Query<&Player>| {
+        // The trigger target is the entity that the observer is targeting.
+        let pressure_plate = trigger.target();
+
+        // The `collider` stored in the event is the entity that the target entity collided with.
+        // There is also a `body` field for the rigid body that the collider is attached to.
+        let other_entity = trigger.collider;
+
+        // Check if the entity colliding with the pressure plate is a player.
+        if player_query.contains(other_entity) {
+            println!("Player {other_entity} stepped on pressure plate {pressure_plate}");
+        }
+    });
+}
+```
+
+The buffered `CollisionStarted` and `CollisionEnded` events are still available, and are good
+for efficiently processing large numbers of collisions between pairs of entities,
+such as for playing sound effects on collision or responding to projectile hits.
+
+## Collision Hooks
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[610]} repo={AVIAN_URL} />
+
+Advanced contact scenarios often require filtering or modifying contacts with custom logic.
+Use cases include:
+
+- One-way platforms
+- Conveyor belts
+- Non-uniform friction and restitution for terrain
+
+In previous releases, Avian had a `PostProcessCollisions` schedule that made some of these
+scenarios possible by allowing users to freely add systems to operate on collision data
+before contact constraints were generated for the solver. However:
+
+- It didn't support filtering contact pairs in the broad phase, only after the narrow phase.
+- It resulted in unnecessary iteration, as filtering and modification couldn't be done directly when contacts are being created or added.
+- It prevented important optimizations from being implemented (see [Reworked Contact Pair Management](#reworked-contact-pair-management)).
+
+As focus has shifted more towards performance, it became evident that `PostProcessCollisions`
+was not the right approach. Instead, physics engines typically use *hooks* or *callbacks* that are called
+during specific parts of the simulation loop.
+
+**Avian 0.3** introduces a new `CollisionHooks` trait that allows users to define custom hooks
+for efficiently filtering and modifying contact pairs. It supersedes the `PostProcessCollisions`
+schedule, and allows users to hook directly into the collision pipeline.
+
+### Defining Hooks
+
+To define collision hooks, implement the `CollisionHooks` trait for a type implementing
+`ReadOnlySystemParam`. The system parameter makes it possible to perform queries,
+access resources, or otherwise read ECS data.
+
+<Callout variant="note">
+    Hooks only allow read-only ECS access because they may run in parallel with each other.
+    However, deferred changes are still supported through `Commands` passed to the hooks.
+    Note that the execution order for these commands is non-deterministic with the `parallel` feature.
+</Callout>
+
+An example of hooks to support interaction groups and one-way platforms might look like this:
+
+```rust
+use avian2d::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
+
+/// A component that groups entities for interactions.
+/// Only entities in the same group can collide.
+#[derive(Component)]
+struct InteractionGroup(u32);
+
+/// A component that marks an entity as a one-way platform.
+#[derive(Component)]
+struct OneWayPlatform;
+
+// Define a `SystemParam` for the collision hooks.
+#[derive(SystemParam)]
+struct MyHooks<'w, 's> {
+    interaction_query: Query<'w, 's, &'static InteractionGroup>,
+    platform_query: Query<'w, 's, &'static Transform, With<OneWayPlatform>>,
+}
+
+// Implement the `CollisionHooks` trait.
+impl CollisionHooks for MyHooks<'_, '_> {
+    // This is called in the broad phase, and acts as an early-out filter.
+    fn filter_pairs(&self, collider1: Entity, collider2: Entity, _commands: &mut Commands) -> bool {
+        // Only allow collisions between entities in the same interaction group.
+        // This could be a basic solution for "multiple physics worlds" that don't interact.
+        let Ok([group1, group2]) = self.interaction_query.get_many([collider1, collider2]) else {
+            return true;
+        };
+        group1.0 == group2.0
+    }
+
+    // This is called in the narrow phase, and allows modifying or rejecting contact pairs.
+    // Returning `false` will reject the contact, while returning `true` will keep it.
+    fn modify_contacts(&self, contacts: &mut Contacts, commands: &mut Commands) -> bool {
+        // Allow entities to pass through the bottom and sides of one-way platforms.
+        // See the `one_way_platform_2d` example for a full implementation.
+        let (entity1, entity2) = (contacts.collider1, contacts.collider2);
+        !self.is_hitting_top_of_platform(entity1, entity2, &self.platform_query, &contacts, commands)
+    }
+}
+```
+
+The hooks can then be added to the app using `PhysicsPlugins::with_collision_hooks`:
+
+```rust
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins,
+            PhysicsPlugins::default().with_collision_hooks::<MyHooks>(),
+        ))
+        .run();
+}
+```
+
+It is rare to want hooks to run for every single collision pair. Thus, hooks are *only* called
+for collisions where at least one entity has the new `ActiveCollisionHooks` component with
+the corresponding flags set. By default, no hooks are called.
+
+```rust
+// Spawn a collider with filtering hooks enabled.
+commands.spawn((Collider::capsule(0.5, 1.5), ActiveCollisionHooks::FILTER_PAIRS));
+
+// Spawn a collider with both filtering and contact modification hooks enabled.
+commands.spawn((
+    Collider::capsule(0.5, 1.5),
+    ActiveCollisionHooks::FILTER_PAIRS | ActiveCollisionHooks::MODIFY_CONTACTS
+));
+
+// Alternatively, all hooks can be enabled with `ActiveCollisionHooks::all()`.
+commands.spawn((Collider::capsule(0.5, 1.5), ActiveCollisionHooks::all()));
+```
+
+## Per-Manifold Material Properties
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[660]} repo={AVIAN_URL} />
+
+The friction and restitution of a collider can be configured with the `Friction` and `Restitution`
+components respectively. However, what if you wanted different friction or restitution
+for different parts of a mesh, or wanted the material properties to change based on
+the entities involved?
+
+**Avian 0.3** stores `friction` and `restitution` properties for each contact manifold,
+allowing you to modify the surface material properties of individual contacts
+inside `CollisionHooks::modify_contacts`.
+
+```rust
+// Inside a `CollisionHooks` implementation (see previous section)
+fn modify_contacts(&self, contacts: &mut ContactPair, _commands: &mut Commands) -> bool {
+    // Iterate over all contact surfaces between the two colliders.
+    for manifold in contacts.manifolds.iter_mut() {
+        // Use a random coefficient of restitution between 0 and 1 for each contact.
+        // Because why not?
+        manifold.restitution = rand::random();
+    }
+    
+    true
+}
+```
+
+Additionally, a new `tangent_velocity` property is provided to emulate the artificial movement
+of contact surfaces, making it possible to simulate scenarios such as conveyor belts or speed pads.
+
+<video controls>
+  <source src="/blog-assets/avian-0-3/conveyor_belt.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+*The new [`conveyor_belt`](https://github.com/Jondolf/avian/blob/64a4cbdeea8b4a054f7f08e25f122f3042e0ae08/crates/avian3d/examples/conveyor_belt.rs) example*
+
+## Physics Picking Filter
+
+<ReleaseNoteMetadata authors={['morgenthum']} prs={[632]} repo={AVIAN_URL} />
+
+Avian has a `PhysicsPickingPlugin` that allows you to pick colliders in the world
+using ray casts. In version 0.2, it required that the `RenderLayers` of cameras
+and pickable colliders match, if specified. Using `RenderLayers` for mesh and sprite picking
+makes sense to ensure that what you see is what you get, but for colliders,
+there is no such connection to rendering or visuals. Instead, it would be
+more useful to support the filtering options normally provided for ray casts.
+
+**Avian 0.3** introduces a `PhysicsPickingFilter` to filter pickable entities
+using a `SpatialQueryFilter`.
+
+```rust
+// Only enable picking NPCs with this camera.
+commands.spawn((
+    Camera2d,
+    PhysicsPickingFilter::from_mask(GameLayer::Npc),
+));
+```
+
+## Physics Diagnostics
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[653]} repo={AVIAN_URL} />
+
+As Avian has grown, performance has been increasingly becoming more relevant.
+However, to really be able to detect bottlenecks and determine how changes affect performance,
+we need a way to profile the physics simulation.
+
+**Avian 0.3** introduces built-in diagnostics for physics timers and counters with minimal overhead.
+The results are stored in separate resources like `SolverDiagnostics` and `SpatialQueryDiagnostics`
+to ensure that you're only tracking information for plugins that you actually use. Currently,
+diagnostics are enabled by default and cannot be disabled.
+
+Users could access and log these resources directly to monitor physics performance,
+but as we will see, there are also built-in features for visualizing them more conveniently.
+
+<Callout variant="note" title="Why not just use Tracy or flame graphs?">
+    Tracy and flame graphs are valuable tools for profiling, but they're not as good for seeing results in real time,
+    are somewhat inconvenient to set up, and have their own overhead. The new profiling tools are not a replacement
+    for Tracy, but complement it with more targeted real-time physics performance monitoring.
+</Callout>
+
+### Integration With `DiagnosticsStore`
+
+Bevy has its own `DiagnosticsStore` for storing diagnostics information and reading it
+with smoothing and other convenience features. To integrate with this, **Avian 0.3**
+adds a `bevy_diagnostic` feature and `PhysicsDiagnosticsPlugin` for writing Avian's
+own diagnostics to the store.
+
+```rust
+app.add_plugins((
+    DefaultPlugins,
+    PhysicsPlugins::default(),
+    // Enable writing physics diagnostics to Bevy's `DiagnosticsStore`.
+    PhysicsDiagnosticsPlugin,
+));
+```
+
+You can access a specific physics diagnostic from the `DiagnosticsStore` resource
+using the diagnostic path stored as an associated constant in the corresponding
+diagnostics resource.
+
+```rust
+// Not sure when you'd want to log a single diagnostic, but you can do it :D
+fn log_narrow_phase_time(diagnostics: Res<DiagnosticsStore>) {
+    // Get the diagnostic.
+    let Some(diagnostic) = diagnostics.get(CollisionDiagnostics::NARROW_PHASE) else {
+        return;
+    };
+
+    // Get the measurement and average.
+    if let (Some(measurement), Some(average)) = (diagnostic.measurement(), diagnostic.average()) {
+        let time = measurement.value;
+        println!(
+            "Narrow phase time: {time} (avg: {average}) {}",
+            diagnostic.suffix
+        );
+    }
+}
+```
+
+### Physics Diagnostics UI
+
+Having all of these diagnostics available is nice and all, but viewing and displaying them
+in a useful way involves a decent amount of code and effort.
+
+To make this easier (and prettier!), an optional debug UI for displaying physics diagnostics
+is provided with the `diagnostic_ui` feature and `PhysicsDiagnosticsUiPlugin`. It displays
+all active built-in physics diagnostics in neat groups, with both current and average times shown.
+
+<img alt="Physics diagnostics UI" src="/blog-assets/avian-0-3/diagnostic_ui.png" />
+
+*Note: The text at the top right is not a part of the diagnostics UI, but a part of the examples.*
+
+The UI can be configured using the `PhysicsDiagnosticsUiSettings` resource.
+
+## Reworked Contact Pair Management
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[683, 689]} repo={AVIAN_URL} />
+
+Most of the work this cycle was spent on reworking and optimizing contact pair management.
+The goal was to significantly reduce allocations and unnecessary work while increasing parallelism
+and allowing more efficient access to contacts associated with a given entity.
+
+I will dive deep into some technical details here, but if you're not interested in the nitty-gritty,
+you can skip to the [`Collisions` System Parameter](#collisions-system-parameter) section and the sections
+that follow to see the user-facing impact.
+
+### What Was Wrong?
+
+In past releases, contact pair management had lots of inefficiencies:
+
+- We collect all broad phase pairs from scratch to a `Vec` every frame.
+- We iterate through all collisions at least *three* separate times every frame for handling contact status changes (reset statuses, report contacts, remove ended contacts).
+- We have to do a lookup for previous contacts for every contact pair.
+- The logic for resetting collision statuses involves ECS queries and confusing state management.
+- The loop over pairs found by the broad phase collects collisions into new vectors every time.
+
+Overall, there was an excessive amount of iteration and allocations,
+and the logic for managing contact statuses was very confusing,
+
+In addition, the `Collisions` resource itself was not efficient enough for our purposes.
+There are many cases where you may need to iterate over contacts associated with a specific entity,
+but this required a linear scan through *all* collisions. To resolve this, a more graph-like structure is needed.
+
+### The New Approach
+
+**Avian 0.3** changes `Collisions` to a `ContactGraph` (more on that in the next section),
+and reworks contact pair management to look like the following:
+
+1. Find *new* pairs in the broad phase and add them to the `ContactGraph` directly. Duplicate pairs are avoided with fast lookups into a `HashSet<PairKey>`.
+2. Iterate over all pairs in the `ContactGraph` in parallel, maintaining thread-local bit vectors to track contact status changes (i.e. creation or removal). For each contact pair:
+	1. Test if AABBs still overlap.
+	2. If the AABBs are disjoint, set `ContactPairFlags::DISJOINT_AABB` and the status change bit for this contact pair. Continue to the next pair.
+	3. Otherwise, update the contact manifolds.
+	4. Match contacts and transfer contact impulses for warm starting.
+	5. Set flags for whether the contact is touching, and whether it started or stopped touching.
+3. Combine thread-local bit vectors into a global bit vector with bitwise OR.
+4. Serially iterate through set bits using the [count trailing zeros](https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/) method. For each contact pair with a changed status:
+	1. If the AABBs are disjoint, send the `CollisionEnded` event (if events are enabled), update `CollidingEntities`, and remove the pair from the `ContactGraph`.
+	2. If the colliders started touching, send the `CollisionStarted` event (if events are enabled) and update `CollidingEntities`.
+	3. If the AABBs stopped touching, send the `CollisionEnded` event (if events are enabled) and update `CollidingEntities`.
+
+This new approach was largely inspired by [Box2D v3](https://box2d.org/posts/2024/08/releasing-box2d-3.0/).
+It allows contacts to be updated in parallel while preserving determinism by processing pair addition and removal
+in a fast serial loop iterating over bit vectors. Consider reading the [Simulation Islands] article by Erin Catto
+for more details on the general idea (we don't have simulation islands yet, but this builds towards it).
+
+[Simulation Islands]: https://box2d.org/posts/2023/10/simulation-islands/#making-persistent-islands-fast
+
+This improves several aspects:
+
+- The broad phase doesn't need to collect its pairs into a buffer, as it adds them to the `ContactGraph` directly.
+- We only iterate through contact pairs *once* every frame for handling contact status changes, using bit scanning intrinsics to only iterate over pairs that actually changed.
+- We are mutably iterating over the `ContactGraph` directly, and don't need to do separate lookups for previous contacts or perform any extra allocations.
+
+As you may have noticed, a contact pair now exists between two colliders if their AABBs are touching,
+even if the actual shapes aren't. This is important for the pair management logic, though it does mean
+that the `ContactGraph` can now have a lot more contact pairs in some cases.
+
+### Contact Graph
+
+Previously, `Collisions` used an `IndexMap` to store collisions, keyed by `(Entity, Entity)`.
+The motivation was that we get `Vec`-like iteration speed with preserved insertion order
+and fast lookups by entity pairs.
+
+However, there are also scenarios where you may need to iterate over the entities colliding with a given entity,
+such as for simulation islands or even gameplay logic. With just an `IndexMap`, this requires iterating over *all* pairs.
+
+**Avian 0.3** replaces `Collisions` with a `ContactGraph` that stores an undirected graph data structure
+called `UnGraph`, based on [petgraph](https://github.com/petgraph/petgraph/), simplified and tailored for our use cases.
+
+```rust
+#[derive(Clone, Debug)]
+pub struct UnGraph<N, E> {
+    nodes: Vec<Node<N>>,
+    edges: Vec<Edge<E>>,
+}
+```
+
+For the contact graph, nodes are collider entities, and edges are contact pairs.
+However, we still *also* need a way to look up contact pairs by entities.
+For this purpose, we have *another* custom data structure called `SparseSecondaryEntityMap`:
+
+```rust
+#[derive(Debug, Clone)]
+struct Slot<T> {
+    generation: u32,
+    value: T,
+}
+
+#[derive(Debug, Clone)]
+pub struct SparseSecondaryEntityMap<V, S: hash::BuildHasher = RandomState> {
+    slots: HashMap<u32, Slot<V>, S>,
+}
+```
+
+It is essentially a sparse map for associating data with entities in a generational arena (the ECS).
+
+<Callout variant="note" title='Comparison to Rapier'>
+    The [Rapier](https://rapier.rs/) physics engine uses a dense [`Coarena`] with `ColliderHandle`s for this,
+    along with a `HashMap` to map `Entity` IDs to `ColliderHandle`s. This results in double-lookups for user code.
+
+    We are instead using `Entity` directly, which has the side effect that a sparse mapping is needed to avoid
+    ballooning memory usage if users have millions of non-physics entities that result in large `Entity` indices.
+
+    [`Coarena`]: https://docs.rs/rapier3d/0.23.1/rapier3d/data/struct.Coarena.html
+</Callout>
+
+Additionally, a `HashSet<PairKey>` is used for fast lookups of contact pairs,
+where `PairKey` stores a `u64` hash of the two `Entity` indices in ascending order.
+
+So, in summary, the `ContactGraph` is a combination of three data structures:
+
+- `UnGraph<Entity, ContactPair>` for storing the actual undirected contact graph.
+- `SparseSecondaryEntityMap<NodeIndex>` for mapping `Entity` IDs to graph node indices.
+- `HashSet<PairKey>` for fast lookups of contact pairs.
+
+All of this complexity is abstracted behind an efficient and convenient API with methods like the following:
+
+- `get`, `get_mut`
+- `contains`, `contains_key`
+- `iter`, `iter_mut`
+- `iter_touching`, `iter_touching_mut`
+- `collisions_with`, `collisions_with_mut`
+- `entities_colliding_with`
+
+and a few ones for adding and removing pairs, primarily intended for internals.
+
+### `Collisions` System Parameter
+
+As described in the [previous section](#contact-graph), the old `Collisions` resource was replaced
+by a new `ContactGraph` that contains both touching and non-touching contacts. However, this is inconvenient
+for users, as most scenarios will only care about contacts where the colliders are actually touching.
+
+**Avian 0.3** provides a `Collisions` system parameter that wraps the `ContactGraph` with a simpler,
+more user-friendly API that only returns touching contact pairs. From the user's perspective,
+it is basically identical to the old `Collisions` resource, with the main difference being
+that you replace `Res<Collisions>` with just `Collisions` in your systems.
+
+
+```rust
+#[derive(Component)]
+struct PressurePlate;
+
+fn activate_pressure_plates(mut query: Query<Entity, With<PressurePlate>>, collisions: Collisions) {
+    for pressure_plate in &query {
+        // Compute the total impulse applied to the pressure plate.
+        let mut total_impulse = 0.0;
+
+        for contact_pair in collisions.collisions_with(pressure_plate) {
+            total_impulse += contact_pair.total_normal_impulse_magnitude();
+        }
+
+        if total_impulse > 5.0 {
+            println!("Pressure plate activated!");
+        }
+    }
+}
+```
+
+Unlike in past releases, `Collisions` does not allow mutating or removing contacts.
+This limitation is intentional, as contact modification and filtering should typically
+be handled via [`CollisionHooks`](#collision-hooks) to behave correctly.
+
+If you need lower-level access to contact pairs, the `ContactGraph` resource can still be used directly.
+
+### Performance
+
+For a 2D pyramid with a base of 50 boxes, a total of 1276 colliders, using 6 substeps,
+the performance profile with the `parallel` feature looks like this after 500 steps:
+
+<img alt="Narrow phase performance comparison" src="/blog-assets/avian-0-3/narrow_phase_perf_before_after.png" />
+
+Notably:
+
+- **Narrow Phase**: 4.5x as fast, despite also handling collision events
+- **Collision Events**: This whole separate step is gone, and handled by the narrow phase
+- **Store Impulses**: From 0.12 ms down to 0.03 ms, because fetching contacts is handled more efficiently
+- **Other**: From 0.97 ms down to 0.18 ms, largely due to `wake_on_collision_ended` being removed in favor of much more efficient logic integrated into the narrow phase
+
+Single-threaded performance is also improved, but to a slightly lesser extent.
+
+## Faster Contact Constraint Generation
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[699, 712]} repo={AVIAN_URL} />
+
+Past releases generated contact constraints in a separate serial step after the narrow phase.
+This required iterating through all contact pairs and querying for colliders and bodies a second time.
+
+**Avian 0.3** generates contact constraints directly in the narrow phase, pushing constraints
+into buffers that are drained into the `ContactConstraints` resource at the end.
+This removes the additional queries and iteration, and makes constraint generation multi-threaded.
+
+<Callout variant="note" title='Multi-threaded determinism'>
+    The current implementation results in the constraint generation order being non-deterministic
+    when using parallelism. For now, we fix this by sorting the constraints afterwards using
+    the original pair indices to retain determinism. In our benchmarks, the cost of sorting seemed
+    to be small, as the constraints are already sorted *within* each chunk. Still, we might explore
+    ways to optimize this further in the future.
+</Callout>
+
+### Performance
+
+In a similar test scene as in the previous section, but with a slightly larger pyramid,
+the performance profile with the `parallel` feature looks like this:
+
+<img alt="Contact constraint generation performance comparison" src="/blog-assets/avian-0-3/contact_constraint_generation_before_after.png" />
+
+*Note: The above image is from before we added sorting for the constraints to retain determinism,
+but it only adds about 0.03 ms.*
+
+Notably, the narrow phase takes slightly longer, as it now also handles contact constraint generation,
+but their combined overhead is much lower than before, from 1.26 ms down to 0.55 ms in this case.
+
+You might also notice that the "Store Impulses" step is more expensive than before.
+This is because the contact pair lookup can no longer be performed using the original pair index,
+as constraints are generated before contact pair removal, and pair removal can invalidate indices.
+One approach I tried is to modify the `ContactGraph` to maintain a stable order for its edge connectivity
+(see [#706](https://github.com/Jondolf/avian/pull/706)), but it had some potential implications for determinism
+that I didn't like, so I left it for future investigation.
+
+## Improved Contact Types
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[616, 660, 683, 685]} repo={AVIAN_URL} />
+
+As you may have noticed from some code examples, contact types have undergone several changes.
+This was done to make things more clear and consistent, and to optimize how contacts are stored.
+
+Some noteworthy mentions:
+
+- `Contacts` has been renamed to `ContactPair`.
+- `ContactData` has been renamed to `ContactPoint`.
+- `ContactPair` and `ContactManifold` have some new helpers for normal impulses.
+- `ContactPair` now stores flags for what kind of contact it is (e.g. `SENSOR`, `TOUCHING`, `CONTACT_EVENTS`), and has helpers such as `is_sensor`.
+- `ContactManifold` now stores a single world-space `normal` instead of two local normals.
+- `ContactManifold` now stores surface material properties (see [Per-Manifold Material Properties](#per-manifold-material-properties)).
+
+Other than that, the changes are mostly straightforward property renames, method deprecations,
+and minor changes to how values are stored. You can see a more complete list of changes
+in the migration guide on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.3.0).
+
+## Collider Context
+
+<ReleaseNoteMetadata authors={['oxkitsune', 'aecsocket', 'NiseVoid']} prs={[665]} repo={AVIAN_URL} />
+
+Some advanced users require custom collider types that need to obtain additional data
+from the ECS, for example for a voxel collider. This was previously not possible,
+as the `AnyCollider` trait's methods did not provide ECS access.
+
+**Avian 0.3** adds a `Context` associated type to the `AnyCollider` trait,
+allowing you to specify a system parameter to be passed to methods such as
+`aabb_with_context` and `contact_manifolds_with_context`.
+
+```rust
+#[derive(Component)]
+pub struct VoxelCollider;
+
+#[derive(Component)]
+pub struct VoxelData {
+    // Collider voxel data...
+}
+
+impl AnyCollider for VoxelCollider {
+    type Context = (
+        // You can query for extra components here
+        SQuery<&'static VoxelData>,
+        // Or use any other read-only system parameter
+        SRes<Time>,
+    );
+
+    fn aabb_with_context(
+        &self,
+        position: Vector,
+        rotation: impl Into<Rotation>,
+        context: AabbContext<Self::Context>,
+    ) -> ColliderAabb {
+        // Compute the AABB
+        unimplemented!()
+    }
+
+    fn contact_manifolds_with_context(
+        &self,
+        other: &Self,
+        position1: Vector,
+        rotation1: impl Into<Rotation>,
+        position2: Vector,
+        rotation2: impl Into<Rotation>,
+        prediction_distance: Scalar,
+        context: ContactManifoldContext<Self::Context>,
+    ) -> Vec<ContactManifold> {
+        let [voxels1, voxels2] = context.0.get_many([context.entity1, context.entity2])
+            .expect("our own `VoxelCollider` entities should have `VoxelData`");
+        let elapsed = context.1.elapsed();
+        // Compute the contact manifolds
+        unimplemented!()
+    }
+}
+```
+
+## `ColliderOf` Relationship
+
+<ReleaseNoteMetadata authors={['Jondolf']} prs={[671]} repo={AVIAN_URL} />
+
+Bevy 0.16 introduced initial support for entity-entity [relationships](https://bevyengine.org/news/bevy-0-16/#ecs-relationships),
+and changed the `Parent` component to a `ChildOf` relationship component.
+
+**Avian 0.3** follows suit, and replaces its `ColliderParent` component with a new `ColliderOf` relationship.
+It is used to attach colliders to rigid bodies, and is automatically inserted when adding a collider
+on a rigid body or as a descendant of one.
+
+In addition, rigid bodies now track which colliders are attached to them with the `RigidBodyColliders` component.
+It is a `RelationshipTarget`, analogous to the `Children` component for parent-child relationships.
+
+## Other Changes and Fixes
+
+There are still many other changes and fixes that I didn't cover in detail.
+Some notable ones include:
+
+- Take [entity disabling](https://bevyengine.org/news/bevy-0-16/#entity-disabling-default-query-filters) into account for physics by @Jondolf in [#694](https://github.com/Jondolf/avian/pull/694)
+- Clean up collision detection module structure and re-exports by @Jondolf in [#698](https://github.com/Jondolf/avian/pull/698)
+- Reduce `SpatialQueryPipeline` overhead by @Jondolf in [#696](https://github.com/Jondolf/avian/pull/696)
+- Fix incorrect computation of shifted angular inertia tensor by @Jondolf in [bevy_heavy](https://github.com/Jondolf/bevy_heavy/commit/3905efe581700296de8f48d33388c5471dfca785) and [parry/334](https://github.com/dimforge/parry/pull/334)
+- Refactor to minimize `std` usage by @bushrat011899 in [#668](https://github.com/Jondolf/avian/pull/668)
+- Use Bevy's faster transform propagation by @ramirezmike in [#725](https://github.com/Jondolf/avian/pull/725)
+
+A more complete list of changes can be found on [GitHub](https://github.com/Jondolf/avian/releases/tag/v0.3.0).
+
+## In-Progress Work
+
+This release ended up focusing mostly on the contact pair management rework and related improvements.
+I chose it as my focus area, as it was not only important for improving the current collision detection
+system, but also helps work towards *other* important features like simulation islands and the BVH broad phase.
+
+However, there was still a *lot* of other exciting work that has been happening in the background,
+but didn't make it for 0.3. Instead of the usual "What's Next" section, I thought I'd highlight
+some of this ongoing work in a bit more detail to give a better idea of what we've been working on.
+
+### Solver Bodies
+
+Based on typical performance profiles, it is quite clear that we are severely bottlenecked by the solver.
+The solver is responsible for actually applying forces and impulses, handling contacts and joints,
+and moving bodies based on velocity.
+
+<img alt="Before solver bodies" src="/blog-assets/avian-0-3/before_solver_bodies.png" />
+
+There is a *lot* that we could do to improve the situation. Some of the large but advanced optimizations
+include graph coloring to improve parallelism, and wide SIMD constraints to solve several constraints simultaneously,
+but there are also lower hanging fruit.
+
+Namely, the ECS appears to be performing rather poorly for random access when fetching bodies required for constraints,
+and the body data itself is not stored as efficiently as it could be.
+
+Right now, the solver is basically just iterating through constraints, and fetching a ton of data for the entities
+of each constraint using `Query::get`. This involves a lot of overhead.
+
+We can instead contiguously store body data required by the solver in special `SolverBody` structs:
+
+```rust
+// This representation is inspired by Box2D v3.
+// 32 bytes in total
+#[cfg(feature = "2d")]
+pub struct SolverBody {
+    pub linear_velocity: Vec2, // 8 bytes
+    pub angular_velocity: f32, // 4 bytes
+    pub delta_position: Vec2,  // 8 bytes
+    pub delta_rotation: Rot2,  // 8 bytes
+    pub flags: BodyFlags,      // 4 bytes
+}
+
+// This representation is my own current design :D
+// 16 bytes in total
+#[cfg(feature = "2d")]
+pub struct SolverBodyInertia {
+    // Includes locked axes
+    effective_inv_mass: Vec2,   // 8 bytes
+    effective_inv_inertia: f32, // 4 bytes
+    flags: InertiaFlags,        // 4 bytes
+}
+```
+
+and sync the results back to the ECS after the solver. The result is a **3x** performance improvement to the solver.
+
+<img alt="After solver bodies" src="/blog-assets/avian-0-3/after_solver_bodies.png" />
+
+Crazy! However, this does unfortunately mean that we are "using the ECS" less, and it makes it more difficult
+for users to modify body data manually inside the solver. But I think ultimately this tradeoff will be worth it
+for the massive performance gains.
+
+Why didn't I implement this for Avian 0.3 then? It involves large changes to the internals, some of which may break
+advanced users. Before I release this to users, I need to test and polish things more, and make sure this doesn't
+land in a half-baked state. Still, I hope to merge the initial work early in the release cycle and build more
+improvements on top.
+
+### Joint Rework
+
+This has been on the roadmap [ever since Avian 0.1](#whats-next). Despite moving contacts to an impulse-based solver,
+we still use XPBD for joints. Due to potential (though unlikely) [patenting risks](#patent), missing features,
+and incompatibilities with future optimizations, we want to move joints to an impulse-based solver as well.
+
+It's a massive undertaking, but I finally had some progress towards a prototype, having implemented
+functional revolute joints and spherical joints with customizable angle limits.
+
+<video controls>
+  <source src="/blog-assets/avian-0-3/impulse_joints.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+I would really, really like to finish this in time for 0.4, but we'll just have to see how it goes!
+
+### BVH Broad Phase
+
+Currently, we still use an extremely simple sweep-and-prune algorithm for broad phase collision detection.
+While it has worked well enough so far, it has started showing up more in traces as performance
+has become a larger focus.
+
+We intend to replace sweep-and-prune with an approach using bounding volume hierarchies (BVH),
+with separate trees for active bodies and static or sleeping bodies. @DGriffin91's [OBVHS] crate
+is the current front-runner for the BVH implementation, and they have been working on leaf insertion
+and removal to better fit our needs.
+
+I've started initial experimentation with the BVH broad phase, but it is still in the early stages.
+
+[OBVHS]: https://github.com/DGriffin91/obvhs
+
+### Spatial Query Pipeline Rework
+
+Spatial queries are currently directly tied to Parry and the `Collider` type.
+This means that alternative collision backends cannot reuse the existing infrastructure
+around spatial queries.
+
+Additionally, if we switch to a BVH broad phase, we'd want to reuse the same acceleration structure for spatial queries.
+But if we intend to use OBVHS for the broad phase, this wouldn't work as long as spatial queries use Parry's `Qbvh`!
+
+Luckily, @NiseVoid has been working on a new spatial query pipeline that is fully decoupled
+from Parry and uses OBVHS for the acceleration structure. If all goes well, it should hopefully
+give us much more flexible, backend-agnostic spatial queries.
+
+In the future, we could even consider splitting this further into its own crate,
+providing a generic interface for spatial queries in Bevy even without any physics
+or collision detection.
+
+### Peck
+
+As I have mentioned a few times in the past, I have been working on my own collision detection library
+to use in Avian, as we are currently a bit constrained by Parry. The goal is to have a more Bevy-native
+implementation using Bevy's shape primitives, tailored to better fit our needs.
+
+Peck is still in its early stages, but steady progress is being made.
+In particular, I have now implemented contact manifold computation for both 2D and 3D,
+allowing us to simulate contacts for arbitrary convex shapes:
+
+<video controls>
+  <source src="/blog-assets/avian-0-3/peck_contacts_2d.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+Additionally, I have implemented analytic solutions for point queries
+and closest surface normal queries for most 2D shapes and 3D shapes:
+
+<video controls>
+  <source src="/blog-assets/avian-0-3/peck_point_projection_2d.mp4" type="video/mp4" />
+Your browser does not support the video tag.
+</video>
+
+Finally, @atlv24 has been working on improved GJK and EPA implementations
+inspired by [Jolt](https://github.com/jrouwe/JoltPhysics). Based on initial benchmarks,
+it seems to be more than **2x** as fast as Parry's implementation, and there is still more room
+for improvement. Exciting stuff! It is currently separate from Peck, but we have started
+initial work on adopting it.
+
+### `no_std` Compatibility
+
+Bevy 0.16 got [initial support for `no_std` targets](https://bevyengine.org/news/bevy-0-16/#bevy-no-std-support).
+While it is unclear how well a full-blown physics engine would work in `no_std`,
+it would be cool to try it out, and we made some progress towards it!
+
+I improved `no_std` compatibility in Parry (see [#330](https://github.com/dimforge/parry/pull/330)),
+and opened a [PR](https://github.com/Jondolf/avian/pull/703) for Avian to add `no_std` support.
+However, Parry currently still requires synchronization primitives for some important traits,
+breaking support for platforms without them (most retro consoles and embedded systems).
+Because of this, I have left it for now, but will revisit it if/when Parry has wider support for `no_std`.
+
+### Force Rework
+
+The current API for forces and impulses is a bit clunky and confusing.
+Both `ExternalForce` and `ExternalTorque` as well as `ExternalImpulse` and `ExternalAngularImpulse`
+can be either persistent or cleared after every physics step, and applying local forces is difficult.
+Additionally, there is no easy way to apply acceleration in a mass-independent way that integrates with substepping.
+
+I have been exploring some alternative approaches, and the current design looks like this:
+
+1. `ConstantForce`, `ConstantTorque`, `ConstantLinearAcceleration`, and `ConstantAngularAcceleration`
+   components for persistent forces and torques.
+2. `ForceHelper` system parameter for applying one-shot forces, torques, and impulses.
+3. Internally, all the forces (and gravity) are combined into `LinearVelocityIncrement` and `AngularVelocityIncrement`
+   components, which can be efficiently applied at each substep.
+
+In practice, using the `ForceHelper` system parameter would look roughly like this:
+
+```rust
+fn orbit(query: Query<Entity, With<Planet>>, mut forces: ForceHelper) {
+    for planet in &query {
+        // ...compute gravity force...
+        forces.entity(planet)
+            .apply_force(gravity_force)
+            .apply_local_torque(spin_torque);
+    }
+}
+```
+
+This kind of API would be closer to what you might be used to from other engines,
+such as Unity's [`Rigidbody.AddForce`](https://docs.unity3d.com/ScriptReference/Rigidbody.AddForce.html)
+or Godot's [`RigidBody3D.apply_force`](https://docs.godotengine.org/en/stable/classes/class_rigidbody3d.html#class-rigidbody3d-method-apply-force).
+In comparison to the current two components, it provides much more flexibility
+and is significantly less error-prone.
+
+### Character Controller Working Group
+
+Most games need a character controller. Over time, several people have implemented their own
+versions with various move-and-slide algorithms. Ever since the start of Avian, there has also
+been interest in having something official built in.
+
+Recently, out of the blue, an [Avian Character Controller Working Group](https://discord.gg/b4xs9aYY)
+was formed! The group is still largely in the prototyping stages, working on test scenes,
+iterating on making the core move-and-slide logic rock-solid, and sketching out the high-level
+design goals, but it is making steady progress.
+
+The end-goal is to upstream a robust, extensible set of features to allow people to comfortably implement
+all sorts of character behavior, while creating examples of more feature-complete character controllers
+to demonstrate how the features can be used for different genres.
+
+It is very WIP, but the repository for the current experiments can be found [here](https://github.com/Ploruto/kcc_prototyping).
+If you want to see character controllers in Avian, consider joining the effort!
+
+## Support Me
+
+While Avian will always be free and permissively licensed, developing and maintaining it takes a lot of time and effort.
+
+If you find my work valuable, consider [supporting me through GitHub Sponsors](https://github.com/sponsors/Jondolf). This is ultimately my hobby, but by supporting me you can help make it more sustainable.
+
+Thank you ❤️
