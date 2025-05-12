@@ -1,8 +1,10 @@
 ---
-import { CollectionEntry, getCollection } from "astro:content";
+import { type CollectionEntry, getCollection } from "astro:content";
 import PageCard from "../../components/PageCard.astro";
 import Tag from "../../components/Tag.svelte";
 import BasePageLayout from "../../layouts/BasePageLayout.astro";
+import rssLogo from "../../assets/rss_logo.svg";
+import { Image } from "astro:assets";
 
 const year = +(Astro.url.searchParams.get("year") ?? "NaN");
 const month = +(Astro.url.searchParams.get("month") ?? "NaN");
@@ -16,7 +18,7 @@ const posts = (
       (!year || +year === data.createdAt.getFullYear()) &&
       (!month || +month === data.createdAt.getMonth()) &&
       (!day || +day === data.createdAt.getDate()) &&
-      (tags.length === 0 || tags.every((tag) => data.tags?.includes(tag)))
+      (tags.length === 0 || tags.every((tag) => data.tags?.includes(tag))),
   )
 ).sort((a, b) => b.data.id - a.data.id);
 const postsByYear = new Map<number, CollectionEntry<"blog">[]>();
@@ -44,7 +46,23 @@ for (const post of posts) {
   ]}
 >
   <header>
-    <h1>Blog</h1>
+    <h1>
+      <span> Blog </span>
+      <a
+        href="/blog/feed.xml"
+        aria-label="RSS Feed"
+        style="margin-left:0.5rem;"
+      >
+        <Image
+          src={rssLogo}
+          alt="RSS Feed"
+          width="24"
+          height="24"
+          class="rss-icon"
+        />
+      </a>
+    </h1>
+
     <p>
       This is my personal blog where I show my journey as a developer while
       exploring various science and technology topics that interest me.
@@ -89,6 +107,11 @@ for (const post of posts) {
   header p {
     font-size: 1.1em;
     color: var(--text-color-2);
+  }
+
+  .rss-icon {
+    border-radius: 2px;
+    overflow: hidden;
   }
 
   .posts {
